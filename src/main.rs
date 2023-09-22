@@ -18,9 +18,22 @@ use std::{
     sync::Arc,
 };
 
+#[derive(Deserialize)]
+struct ServiceConfig {
+    port: u16,
+}
+
+async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
+    let config_str = tokio::fs::read_to_string("config.toml").await?;
+    let config = toml::from_str(&config_str)?;
+    Ok(config)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     simple_logger::init_with_level(log::Level::Error)?;
+
+    let config = get_config().await?;
 
     let db = SqlitePoolOptions::new().connect("sqlite::memory:").await?;
 
@@ -36,10 +49,13 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .route("/l/:id/info", get(get_link_info_route))
         .with_state(db);
 
-    axum::Server::bind(&"0.0.0.0:3000".parse().unwrap())
-        .serve(router.into_make_service_with_connect_info::<SocketAddr>())
-        .await
-        .unwrap();
+    axum::Server::bind(&SocketAddr::from((
+        IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+        config.port,
+    )))
+    .serve(router.into_make_service_with_connect_info::<SocketAddr>())
+    .await
+    .unwrap();
 
     Ok(())
 }
