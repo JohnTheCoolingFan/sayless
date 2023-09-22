@@ -1,0 +1,17 @@
+[package]
+name = "sayless"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+axum = { version = "0.6.20", features = ["http2", "headers", "macros"] }
+blake3 = "1.4.1"
+chrono = { version = "0.4.31", features = ["serde"] }
+log = "0.4.20"
+rand = "0.8.5"
+serde = { version = "1.0.188", features = ["derive"] }
+simple_logger = "4.2.0"
+sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-rustls", "sqlite"] }
+tokio = { version = "1.32.0", features = ["full"] }
