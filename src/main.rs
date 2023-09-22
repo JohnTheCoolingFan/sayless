@@ -1,6 +1,6 @@
 use axum::{
     debug_handler,
-    extract::{ConnectInfo, Path, State},
+    extract::{Path, State},
     http::{HeaderName, StatusCode, Uri},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -59,7 +59,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
         config.port,
     )))
-    .serve(router.into_make_service_with_connect_info::<SocketAddr>())
+    //.serve(router.into_make_service_with_connect_info::<SocketAddr>())
+    .serve(router.into_make_service())
     .await
     .unwrap();
 
@@ -120,7 +121,7 @@ impl Distribution<char> for Base58Chars {
 #[debug_handler]
 async fn create_link_route(
     State(db): State<Arc<Pool<Sqlite>>>,
-    ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    //ConnectInfo(addr): ConnectInfo<SocketAddr>,
     url: String,
 ) -> Result<CreatedLink, StatusCode> {
     let uri = Uri::from_str(&url).map_err(|_| StatusCode::BAD_REQUEST)?;
@@ -137,17 +138,20 @@ async fn create_link_route(
     {
         Ok(CreatedLink { id })
     } else {
+        /*
         let created_by = match addr.ip() {
             IpAddr::V4(ip4) => Some(ip4),
             _ => None,
         };
+        */
         let rng = StdRng::from_entropy();
         let new_link_id: String = rng.sample_iter(Base58Chars).take(7).collect();
         sqlx::query("INSERT INTO links (id, hash, link, created_at, created_by) values ($1, $2, $3, DATETIME('now'), $4)")
             .bind(&new_link_id)
             .bind(uri_hash_bytes.as_ref())
             .bind(uri.to_string())
-            .bind(created_by.map(|ipv4| ipv4.octets()).unwrap_or([0u8; 4]).as_ref())
+            //.bind(created_by.map(|ipv4| ipv4.octets()).unwrap_or([0u8; 4]).as_ref())
+            .bind([0; 4].as_ref())
             .execute(db.as_ref())
             .await
             .map_err(|e| {
