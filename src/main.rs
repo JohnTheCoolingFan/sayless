@@ -21,6 +21,8 @@ use std::{
 #[derive(Deserialize)]
 struct ServiceConfig {
     port: u16,
+    #[serde(default)]
+    log_level: Option<log::Level>,
 }
 
 async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
@@ -31,24 +33,28 @@ async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
-    simple_logger::init_with_level(log::Level::Error)?;
+    let config = get_config().await.expect("Reading config failed");
 
-    let config = get_config().await?;
+    simple_logger::init_with_level(config.log_level.unwrap_or(log::Level::Info))?;
 
+    log::info!("connecting to db");
     let db = SqlitePoolOptions::new().connect("sqlite::memory:").await?;
 
+    log::info!("Creating table");
     sqlx::query("CREATE TABLE IF NOT EXISTS links (id TEXT, hash BLOB, link TEXT, created_at TEXT, created_by BLOB)")
         .execute(&db)
         .await?;
 
     let db = Arc::new(db);
 
+    log::info!("Building router");
     let router = Router::new()
         .route("/l/create", post(create_link_route))
         .route("/l/:id", get(get_link_route))
         .route("/l/:id/info", get(get_link_info_route))
         .with_state(db);
 
+    log::info!("Starting server");
     axum::Server::bind(&SocketAddr::from((
         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
         config.port,
