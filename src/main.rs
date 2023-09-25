@@ -25,12 +25,16 @@ struct ServiceConfig {
     max_strikes: u16,
     #[serde(default)]
     record_ips: bool,
-    #[serde(default)]
-    log_level: Option<log::Level>,
+    #[serde(default = "default_log_level")]
+    log_level: log::Level,
 }
 
 const fn default_max_strikes() -> u16 {
     30
+}
+
+const fn default_log_level() -> log::Level {
+    log::Level::Info
 }
 
 async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
@@ -51,7 +55,7 @@ struct ServiceState {
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let config = get_config().await.expect("Reading config failed");
 
-    simple_logger::init_with_level(config.log_level.unwrap_or(log::Level::Info))?;
+    simple_logger::init_with_level(config.log_level)?;
 
     dotenvy::dotenv()?;
 
