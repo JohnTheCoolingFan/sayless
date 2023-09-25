@@ -192,6 +192,8 @@ struct LinkInfo {
     hash: Hash,
     link: String,
     created_at: DateTime<Utc>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    created_by: Option<IpAddr>,
 }
 
 mod serde_hash {
@@ -334,8 +336,48 @@ async fn get_link_route(
     Ok(Redirect::to(&link_row.0))
 }
 
+async fn check_ip_view_perm(
+    config: &ServiceConfig,
+    headers: HeaderMap,
+    db: &DbPool,
+) -> Result<bool, StatusCode> {
+    let auth_header = headers.get(AUTH_HEADER);
+    match auth_header {
+        Some(auth_header) => {
+            let auth_header_str = auth_header.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
+            if config.master_token.as_ref().unwrap() == auth_header_str {
+                return Ok(true);
+            }
+            let tok_response: Result<(bool, bool, DateTime<Utc>), sqlx::Error> = sqlx::query_as(
+                "SELECT admin_perm, view_ips_perm, expires_at FROM tokens WHERE token = ?",
+            )
+            .bind(auth_header_str)
+            .fetch_one(db.as_ref())
+            .await;
+            match tok_response {
+                Err(sqlx::Error::RowNotFound) => Ok(false),
+                Err(err) => {
+                    log::error!("Failed to fetch token permissions: {}", err);
+                    Err(StatusCode::INTERNAL_SERVER_ERROR)
+                }
+                Ok((admin_perm, view_ip_perm, expiry_date)) => {
+                    if !admin_perm || !view_ip_perm {
+                        return Ok(false);
+                    }
+                    if Utc::now() > expiry_date {
+                        return Ok(false);
+                    }
+                    Ok(true)
+                }
+            }
+        }
+        None => Ok(false),
+    }
+}
+
 async fn get_link_info_route(
-    State(ServiceState { db, config: _ }): State<ServiceState>,
+    State(ServiceState { db, config }): State<ServiceState>,
+    headers: HeaderMap,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
     let (id, hash, link, created_at): (String, Vec<u8>, String, DateTime<Utc>) =
@@ -350,16 +392,31 @@ async fn get_link_info_route(
                     StatusCode::INTERNAL_SERVER_ERROR
                 }
             })?;
+
     log::debug!("Received link info: id {id}, hash {hash:?}, link {link}, created_at {created_at}");
-    // TODO: data access levels, only admins should be able to see created_by ip address
-    /*
-    let created_by = IpAddr::V4(<Ipv4Addr as From<[u8; 4]>>::from(
-        created_by.try_into().map_err(|e: Vec<u8>| {
-            log::error!("Ip address contains invalid amount of bytes: {}", e.len());
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?,
-    ));
-    */
+
+    let created_by = if check_ip_view_perm(&config, headers, &db).await? {
+        let created_by: Option<(Vec<u8>,)> =
+            sqlx::query_as("SELECT created_by FROM origins WHERE id = ?")
+                .bind(&id)
+                .fetch_optional(db.as_ref())
+                .await
+                .map_err(|e| {
+                    log::error!("Error looking up link `{id}` origin: {e}");
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+        if let Some((bytes,)) = created_by {
+            Some(bincode::deserialize(&bytes).map_err(|e| {
+                log::error!("Error deserializing origin ip: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
     Ok(Json(LinkInfo {
         id,
         hash: <Hash as From<[u8; 32]>>::from(hash.try_into().map_err(|e: Vec<u8>| {
@@ -371,6 +428,7 @@ async fn get_link_info_route(
         })?),
         link,
         created_at,
+        created_by,
     }))
 }
 
