@@ -10,7 +10,10 @@ use blake3::Hash;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-use sqlx::{sqlite::SqlitePoolOptions, Pool, Sqlite};
+use sqlx::{
+    mysql::{MySqlConnectOptions, MySqlPoolOptions},
+    MySql, Pool,
+};
 use std::{
     error::Error,
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -21,14 +24,45 @@ use std::{
 #[derive(Deserialize)]
 struct ServiceConfig {
     port: u16,
+    db_credentials: DbCredentials,
+    #[serde(default)]
+    record_ips: bool,
     #[serde(default)]
     log_level: Option<log::Level>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename = "kebab-case")]
+struct DbCredentials {
+    host: String,
+    port: u16,
+    database: String,
+    username: String,
+}
+
+impl DbCredentials {
+    fn to_connect_options(&self) -> MySqlConnectOptions {
+        let password = dotenvy::var("DB_PASSWORD").expect("A database password must be provided");
+        MySqlConnectOptions::new()
+            .host(&self.host)
+            .port(self.port)
+            .database(&self.database)
+            .password(&password)
+            .username(&self.username)
+    }
 }
 
 async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
     let config_str = tokio::fs::read_to_string("config.toml").await?;
     let config = toml::from_str(&config_str)?;
     Ok(config)
+}
+
+type DbPool = Arc<Pool<MySql>>;
+
+#[derive(Clone)]
+struct ServiceState {
+    db: DbPool,
 }
 
 #[tokio::main]
@@ -38,21 +72,47 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     simple_logger::init_with_level(config.log_level.unwrap_or(log::Level::Info))?;
 
     log::info!("connecting to db");
-    let db = SqlitePoolOptions::new().connect("sqlite::memory:").await?;
+    //let db = SqlitePoolOptions::new().connect("sqlite::memory:").await?;
+    let db = MySqlPoolOptions::new()
+        .connect_with(config.db_credentials.to_connect_options())
+        .await?;
 
-    log::info!("Creating table");
-    sqlx::query("CREATE TABLE IF NOT EXISTS links (id TEXT, hash BLOB, link TEXT, created_at TEXT, created_by BLOB)")
+    log::info!("Creating tables");
+
+    log::debug!("Creating `links` table");
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS links (id TEXT NOT NULL, hash BLOB NOT NULL, link TEXT NOT NULL, created_at TEXT NOT NULL)",
+    )
+    .execute(&db)
+    .await?;
+
+    if config.record_ips {
+        log::debug!("Creating `origins` table");
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS origins (id TEXT NOT NULL, created_by TINYBLOB NOT NULL)",
+        )
         .execute(&db)
         .await?;
 
+        log::debug!("Creating `strikes` table");
+        sqlx::query(
+            "CREATE TABLE IF NOT EXISTS strikes (origin TINYBLOB NOT NULL, amount SMALLINT UNSIGNED NOT NULL)",
+        )
+        .execute(&db)
+        .await?;
+    }
+
     let db = Arc::new(db);
+
+    let state = ServiceState { db };
 
     log::info!("Building router");
     let router = Router::new()
         .route("/l/create", post(create_link_route))
         .route("/l/:id", get(get_link_route))
-        .route("/l/:id/info", get(get_link_info_route))
-        .with_state(db);
+        .route("/l/:id/info", get(get_link_info_route));
+
+    let router = router.with_state(state);
 
     log::info!("Starting server");
     axum::Server::bind(&SocketAddr::from((
@@ -120,7 +180,7 @@ impl Distribution<char> for Base58Chars {
 
 #[debug_handler]
 async fn create_link_route(
-    State(db): State<Arc<Pool<Sqlite>>>,
+    State(ServiceState { db }): State<ServiceState>,
     //ConnectInfo(addr): ConnectInfo<SocketAddr>,
     url: String,
 ) -> Result<CreatedLink, StatusCode> {
@@ -163,7 +223,7 @@ async fn create_link_route(
 }
 
 async fn get_link_route(
-    State(db): State<Arc<Pool<Sqlite>>>,
+    State(ServiceState { db }): State<ServiceState>,
     Path(id): Path<String>,
 ) -> Result<Redirect, StatusCode> {
     let link_row: (String,) = sqlx::query_as("SELECT link FROM links WHERE id = $1")
@@ -178,7 +238,7 @@ async fn get_link_route(
 }
 
 async fn get_link_info_route(
-    State(db): State<Arc<Pool<Sqlite>>>,
+    State(ServiceState { db }): State<ServiceState>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
     let (id, hash, link, created_at, _created_by): (String, Vec<u8>, String, String, Vec<u8>) =
