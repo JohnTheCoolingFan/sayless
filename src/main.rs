@@ -1,6 +1,6 @@
 use axum::{
     debug_handler,
-    extract::{Path, State},
+    extract::{ConnectInfo, Path, State},
     http::{HeaderName, StatusCode, Uri},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
@@ -38,6 +38,7 @@ type DbPool = Arc<Pool<MySql>>;
 #[derive(Clone)]
 struct ServiceState {
     db: DbPool,
+    config: ServiceConfig,
 }
 
 #[tokio::main]
@@ -81,7 +82,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let db = Arc::new(db);
 
-    let state = ServiceState { db };
+    let state = ServiceState { db, config };
 
     log::info!("Building router");
     let router = Router::new()
@@ -96,8 +97,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
         config.port,
     )))
-    //.serve(router.into_make_service_with_connect_info::<SocketAddr>())
-    .serve(router.into_make_service())
+    .serve(router.into_make_service_with_connect_info::<SocketAddr>())
     .await
     .unwrap();
 
@@ -128,7 +128,6 @@ struct LinkInfo {
     hash: Hash,
     link: String,
     created_at: DateTime<Utc>,
-    //created_by: IpAddr,
 }
 
 mod serde_hash {
@@ -157,8 +156,8 @@ impl Distribution<char> for Base58Chars {
 
 #[debug_handler]
 async fn create_link_route(
-    State(ServiceState { db }): State<ServiceState>,
-    //ConnectInfo(addr): ConnectInfo<SocketAddr>,
+    State(ServiceState { db, config }): State<ServiceState>,
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     url: String,
 ) -> Result<CreatedLink, StatusCode> {
     let uri = Uri::from_str(&url).map_err(|_| StatusCode::BAD_REQUEST)?;
@@ -175,32 +174,39 @@ async fn create_link_route(
     {
         Ok(CreatedLink { id })
     } else {
-        /*
-        let created_by = match addr.ip() {
-            IpAddr::V4(ip4) => Some(ip4),
-            _ => None,
-        };
-        */
+        let created_by =
+            bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         let rng = StdRng::from_entropy();
         let new_link_id: String = rng.sample_iter(Base58Chars).take(7).collect();
-        sqlx::query("INSERT INTO links (id, hash, link, created_at, created_by) values ($1, $2, $3, DATETIME('now'), $4)")
-            .bind(&new_link_id)
-            .bind(uri_hash_bytes.as_ref())
-            .bind(uri.to_string())
-            //.bind(created_by.map(|ipv4| ipv4.octets()).unwrap_or([0u8; 4]).as_ref())
-            .bind([0; 4].as_ref())
-            .execute(db.as_ref())
-            .await
-            .map_err(|e| {
-                log::error!("Error when inserting new link: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            })?;
+        sqlx::query(
+            "INSERT INTO links (id, hash, link, created_at) values ($1, $2, $3, DATETIME('now'))",
+        )
+        .bind(&new_link_id)
+        .bind(uri_hash_bytes.as_ref())
+        .bind(uri.to_string())
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| {
+            log::error!("Error when inserting new link: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+        if config.record_ips {
+            sqlx::query("INSERT INTO origins (id, created_by) values ($1, $2)")
+                .bind(&new_link_id)
+                .bind(created_by)
+                .execute(db.as_ref())
+                .await
+                .map_err(|e| {
+                    log::error!("Error when inserting link origin: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?;
+        }
         Ok(CreatedLink { id: new_link_id })
     }
 }
 
 async fn get_link_route(
-    State(ServiceState { db }): State<ServiceState>,
+    State(ServiceState { db, config: _ }): State<ServiceState>,
     Path(id): Path<String>,
 ) -> Result<Redirect, StatusCode> {
     let link_row: (String,) = sqlx::query_as("SELECT link FROM links WHERE id = $1")
@@ -215,7 +221,7 @@ async fn get_link_route(
 }
 
 async fn get_link_info_route(
-    State(ServiceState { db }): State<ServiceState>,
+    State(ServiceState { db, config: _ }): State<ServiceState>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
     let (id, hash, link, created_at, _created_by): (String, Vec<u8>, String, String, Vec<u8>) =
@@ -256,6 +262,5 @@ async fn get_link_info_route(
         })?),
         link,
         created_at: created_at.and_utc(),
-        //created_by,
     }))
 }
