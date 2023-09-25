@@ -261,24 +261,24 @@ async fn get_link_info_route(
     State(ServiceState { db, config: _ }): State<ServiceState>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
-    let (id, hash, link, created_at, _created_by): (String, Vec<u8>, String, String, Vec<u8>) =
-        sqlx::query_as("SELECT * FROM links WHERE id = ?")
-            .bind(id)
-            .fetch_one(db.as_ref())
-            .await
-            .map_err(|e| match e {
-                sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
-                _ => {
-                    log::error!("Error looking up link: {}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                }
-            })?;
-    log::debug!("Received link info: id {id}, hash {hash:?}, link {link}, created_at {created_at}");
-    let created_at =
-        NaiveDateTime::parse_from_str(&created_at, "%Y-%m-%d %H:%M:%S").map_err(|e| {
-            log::error!("Error parsing created_at DateTime: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+    let (id, hash, link, created_at, _created_by): (
+        String,
+        Vec<u8>,
+        String,
+        DateTime<Utc>,
+        Vec<u8>,
+    ) = sqlx::query_as("SELECT * FROM links WHERE id = ?")
+        .bind(id)
+        .fetch_one(db.as_ref())
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
+            _ => {
+                log::error!("Error looking up link: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
         })?;
+    log::debug!("Received link info: id {id}, hash {hash:?}, link {link}, created_at {created_at}");
     // TODO: data access levels, only admins should be able to see created_by ip address
     /*
     let created_by = IpAddr::V4(<Ipv4Addr as From<[u8; 4]>>::from(
@@ -298,6 +298,6 @@ async fn get_link_info_route(
             StatusCode::INTERNAL_SERVER_ERROR
         })?),
         link,
-        created_at: created_at.and_utc(),
+        created_at,
     }))
 }
