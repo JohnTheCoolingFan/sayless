@@ -26,11 +26,18 @@ struct ServiceConfig {
     #[serde(default)]
     record_ips: bool,
     #[serde(default)]
-    use_tokens: bool,
+    tokens: Option<TokenConfig>,
     #[serde(default = "default_log_level")]
     log_level: log::Level,
     #[serde(skip_deserializing)]
     master_token: Option<String>,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename = "snake_case")]
+struct TokenConfig {
+    #[serde(default)]
+    creation_requires_auth: bool,
 }
 
 const fn default_max_strikes() -> u16 {
@@ -109,7 +116,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .await?;
     }
 
-    if config.use_tokens {
+    if config.tokens.is_some() {
         let master_token =
             dotenvy::var("MASTER_TOKEN").expect("master token needs to be set if tokens are used");
         config.master_token = Some(master_token);
