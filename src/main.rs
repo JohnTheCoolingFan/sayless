@@ -119,7 +119,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
             tokens (
                 token TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
-                expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 1 YEAR) NOT NULL
+                expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 1 YEAR) NOT NULL,
+                admin_perm BOOL NOT NULL,
+                create_link_perm BOOL NOT NULL,
+                view_ips_perm BOOL NOT NULL
             )"#,
         )
         .execute(&db)
