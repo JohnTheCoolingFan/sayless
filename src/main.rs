@@ -198,7 +198,7 @@ async fn create_link_route(
     let uri_hash = blake3::hash(uri.to_string().as_ref());
     let uri_hash_bytes: [u8; 32] = uri_hash.into();
 
-    if let Some((id,)) = sqlx::query_as("SELECT id FROM links WHERE hash = $1")
+    if let Some((id,)) = sqlx::query_as("SELECT id FROM links WHERE hash = ?")
         .bind(uri_hash_bytes.as_ref())
         .fetch_optional(db.as_ref())
         .await
@@ -261,23 +261,18 @@ async fn get_link_info_route(
     State(ServiceState { db, config: _ }): State<ServiceState>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
-    let (id, hash, link, created_at, _created_by): (
-        String,
-        Vec<u8>,
-        String,
-        DateTime<Utc>,
-        Vec<u8>,
-    ) = sqlx::query_as("SELECT * FROM links WHERE id = ?")
-        .bind(id)
-        .fetch_one(db.as_ref())
-        .await
-        .map_err(|e| match e {
-            sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
-            _ => {
-                log::error!("Error looking up link: {}", e);
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
-        })?;
+    let (id, hash, link, created_at): (String, Vec<u8>, String, DateTime<Utc>) =
+        sqlx::query_as("SELECT * FROM links WHERE id = ?")
+            .bind(id)
+            .fetch_one(db.as_ref())
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
+                _ => {
+                    log::error!("Error looking up link: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                }
+            })?;
     log::debug!("Received link info: id {id}, hash {hash:?}, link {link}, created_at {created_at}");
     // TODO: data access levels, only admins should be able to see created_by ip address
     /*
