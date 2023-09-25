@@ -1,5 +1,4 @@
 use axum::{
-    debug_handler,
     extract::{ConnectInfo, Path, State},
     http::{HeaderName, StatusCode, Uri},
     response::{IntoResponse, Redirect, Response},
@@ -211,7 +210,6 @@ impl Distribution<char> for Base58Chars {
     }
 }
 
-#[debug_handler]
 async fn create_link_route(
     State(ServiceState { db, config }): State<ServiceState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
