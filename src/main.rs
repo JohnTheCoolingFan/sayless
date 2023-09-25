@@ -65,7 +65,14 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     log::debug!("Creating `links` table");
     sqlx::query(
-        "CREATE TABLE IF NOT EXISTS links (id TEXT NOT NULL, hash BLOB NOT NULL, link TEXT NOT NULL, created_at TEXT NOT NULL)",
+        r#"
+        CREATE TABLE IF NOT EXISTS links (
+            id TEXT NOT NULL,
+            hash BLOB NOT NULL,
+            link TEXT NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+        "#,
     )
     .execute(&db)
     .await?;
@@ -204,24 +211,23 @@ async fn create_link_route(
     } else {
         let created_by =
             bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
         let rng = StdRng::from_entropy();
         let new_link_id: String = rng.sample_iter(Base58Chars).take(7).collect();
 
-        sqlx::query(
-            "INSERT INTO links (id, hash, link, created_at) values (?, ?, ?, DATETIME('now'))",
-        )
-        .bind(&new_link_id)
-        .bind(uri_hash_bytes.as_ref())
-        .bind(uri.to_string())
-        .execute(db.as_ref())
-        .await
-        .map_err(|e| {
-            log::error!("Error when inserting new link: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+        sqlx::query("INSERT INTO links (id, hash, link) values (?, ?, ?)")
+            .bind(&new_link_id)
+            .bind(uri_hash_bytes.as_ref())
+            .bind(uri.to_string())
+            .execute(db.as_ref())
+            .await
+            .map_err(|e| {
+                log::error!("Error when inserting new link: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
 
         if config.record_ips {
-            sqlx::query("INSERT INTO origins (id, created_by) values ($1, $2)")
+            sqlx::query("INSERT INTO origins (id, created_by) values (?, ?)")
                 .bind(&new_link_id)
                 .bind(created_by)
                 .execute(db.as_ref())
@@ -240,7 +246,7 @@ async fn get_link_route(
     State(ServiceState { db, config: _ }): State<ServiceState>,
     Path(id): Path<String>,
 ) -> Result<Redirect, StatusCode> {
-    let link_row: (String,) = sqlx::query_as("SELECT link FROM links WHERE id = $1")
+    let link_row: (String,) = sqlx::query_as("SELECT link FROM links WHERE id = ?")
         .bind(id)
         .fetch_one(db.as_ref())
         .await
@@ -256,7 +262,7 @@ async fn get_link_info_route(
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
     let (id, hash, link, created_at, _created_by): (String, Vec<u8>, String, String, Vec<u8>) =
-        sqlx::query_as("SELECT * FROM links WHERE id = $1")
+        sqlx::query_as("SELECT * FROM links WHERE id = ?")
             .bind(id)
             .fetch_one(db.as_ref())
             .await
