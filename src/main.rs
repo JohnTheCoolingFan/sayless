@@ -25,6 +25,8 @@ struct ServiceConfig {
     max_strikes: u16,
     #[serde(default)]
     record_ips: bool,
+    #[serde(default)]
+    use_tokens: bool,
     #[serde(default = "default_log_level")]
     log_level: log::Level,
 }
@@ -84,14 +86,36 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     if config.record_ips {
         log::debug!("Creating `origins` table");
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS origins (id TEXT NOT NULL, created_by TINYBLOB NOT NULL)",
+            r#"CREATE TABLE IF NOT EXISTS
+            origins (
+                id TEXT NOT NULL,
+                created_by TINYBLOB NOT NULL
+            )"#,
         )
         .execute(&db)
         .await?;
 
         log::debug!("Creating `strikes` table");
         sqlx::query(
-            "CREATE TABLE IF NOT EXISTS strikes (origin TINYBLOB NOT NULL, amount SMALLINT UNSIGNED NOT NULL)",
+            r#"CREATE TABLE IF NOT EXISTS 
+            strikes (
+                origin TINYBLOB NOT NULL,
+                amount SMALLINT UNSIGNED NOT NULL
+            )"#,
+        )
+        .execute(&db)
+        .await?;
+    }
+
+    if config.use_tokens {
+        log::debug!("Creating `tokens` table");
+        sqlx::query(
+            r#"CREATE TABLE IF NOT EXISTS
+            tokens (
+                token TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
+                expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 1 YEAR) NOT NULL
+            )"#,
         )
         .execute(&db)
         .await?;
