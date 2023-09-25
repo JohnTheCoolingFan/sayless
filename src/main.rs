@@ -71,7 +71,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     dotenvy::dotenv()?;
 
     log::info!("connecting to db");
-    //let db = SqlitePoolOptions::new().connect("sqlite::memory:").await?;
     let db = MySqlPoolOptions::new()
         .connect(&dotenvy::var("DATABASE_URL")?)
         .await?;
