@@ -21,10 +21,16 @@ use std::{
 #[derive(Deserialize, Clone)]
 struct ServiceConfig {
     port: u16,
+    #[serde(default = "default_max_strikes")]
+    max_strikes: u16,
     #[serde(default)]
     record_ips: bool,
     #[serde(default)]
     log_level: Option<log::Level>,
+}
+
+const fn default_max_strikes() -> u16 {
+    30
 }
 
 async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
@@ -82,6 +88,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let db = Arc::new(db);
 
+    let server_port = config.port;
+
     let state = ServiceState { db, config };
 
     log::info!("Building router");
@@ -95,7 +103,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     log::info!("Starting server");
     axum::Server::bind(&SocketAddr::from((
         IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-        config.port,
+        server_port,
     )))
     .serve(router.into_make_service_with_connect_info::<SocketAddr>())
     .await

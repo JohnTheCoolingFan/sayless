@@ -1,4 +1,5 @@
 port = 3000
 # Values below have defaults
+#max_strikes=30
 #record_ips = false
 #log_level = "info"
