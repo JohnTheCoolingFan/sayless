@@ -18,7 +18,7 @@ use std::{
     sync::Arc,
 };
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct ServiceConfig {
     port: u16,
     #[serde(default)]
