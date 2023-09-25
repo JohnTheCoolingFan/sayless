@@ -7,7 +7,7 @@ use axum::{
     Json, Router,
 };
 use blake3::Hash;
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
