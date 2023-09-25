@@ -24,32 +24,10 @@ use std::{
 #[derive(Deserialize)]
 struct ServiceConfig {
     port: u16,
-    db_credentials: DbCredentials,
     #[serde(default)]
     record_ips: bool,
     #[serde(default)]
     log_level: Option<log::Level>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename = "kebab-case")]
-struct DbCredentials {
-    host: String,
-    port: u16,
-    database: String,
-    username: String,
-}
-
-impl DbCredentials {
-    fn to_connect_options(&self) -> MySqlConnectOptions {
-        let password = dotenvy::var("DB_PASSWORD").expect("A database password must be provided");
-        MySqlConnectOptions::new()
-            .host(&self.host)
-            .port(self.port)
-            .database(&self.database)
-            .password(&password)
-            .username(&self.username)
-    }
 }
 
 async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
@@ -74,7 +52,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     log::info!("connecting to db");
     //let db = SqlitePoolOptions::new().connect("sqlite::memory:").await?;
     let db = MySqlPoolOptions::new()
-        .connect_with(config.db_credentials.to_connect_options())
+        .connect(&dotenvy::var("DATABASE_URL")?)
         .await?;
 
     log::info!("Creating tables");
