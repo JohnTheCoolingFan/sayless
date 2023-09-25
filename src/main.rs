@@ -10,10 +10,7 @@ use blake3::Hash;
 use chrono::{DateTime, NaiveDateTime, Utc};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
-use sqlx::{
-    mysql::{MySqlConnectOptions, MySqlPoolOptions},
-    MySql, Pool,
-};
+use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::{
     error::Error,
     net::{IpAddr, Ipv4Addr, SocketAddr},
