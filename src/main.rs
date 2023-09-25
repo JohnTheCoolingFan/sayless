@@ -255,7 +255,7 @@ async fn get_link_info_route(
         id,
         hash: <Hash as From<[u8; 32]>>::from(hash.try_into().map_err(|e: Vec<u8>| {
             log::error!(
-                "Error converting hash from blob: bloc length is {}",
+                "Error converting hash from blob: blob length is {}",
                 e.len()
             );
             StatusCode::INTERNAL_SERVER_ERROR
