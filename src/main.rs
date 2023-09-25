@@ -49,6 +49,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     simple_logger::init_with_level(config.log_level.unwrap_or(log::Level::Info))?;
 
+    dotenvy::dotenv()?;
+
     log::info!("connecting to db");
     //let db = SqlitePoolOptions::new().connect("sqlite::memory:").await?;
     let db = MySqlPoolOptions::new()
