@@ -168,9 +168,29 @@ async fn create_link_route(
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
     url: String,
 ) -> Result<CreatedLink, StatusCode> {
+    if config.record_ips {
+        let created_by =
+            bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        if let Some((strikes,)) =
+            sqlx::query_as::<_, (u16,)>("SELECT amount FROM strikes WHERE origin = ?")
+                .bind(created_by)
+                .fetch_optional(db.as_ref())
+                .await
+                .map_err(|e| {
+                    log::error!("Error looking up strikes for {}: {}", addr.ip(), e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })?
+        {
+            if strikes >= config.max_strikes {
+                return Err(StatusCode::FORBIDDEN);
+            }
+        }
+    }
+
     let uri = Uri::from_str(&url).map_err(|_| StatusCode::BAD_REQUEST)?;
     let uri_hash = blake3::hash(uri.to_string().as_ref());
     let uri_hash_bytes: [u8; 32] = uri_hash.into();
+
     if let Some((id,)) = sqlx::query_as("SELECT id FROM links WHERE hash = $1")
         .bind(uri_hash_bytes.as_ref())
         .fetch_optional(db.as_ref())
@@ -186,8 +206,9 @@ async fn create_link_route(
             bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         let rng = StdRng::from_entropy();
         let new_link_id: String = rng.sample_iter(Base58Chars).take(7).collect();
+
         sqlx::query(
-            "INSERT INTO links (id, hash, link, created_at) values ($1, $2, $3, DATETIME('now'))",
+            "INSERT INTO links (id, hash, link, created_at) values (?, ?, ?, DATETIME('now'))",
         )
         .bind(&new_link_id)
         .bind(uri_hash_bytes.as_ref())
@@ -198,6 +219,7 @@ async fn create_link_route(
             log::error!("Error when inserting new link: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })?;
+
         if config.record_ips {
             sqlx::query("INSERT INTO origins (id, created_by) values ($1, $2)")
                 .bind(&new_link_id)
@@ -209,6 +231,7 @@ async fn create_link_route(
                     StatusCode::INTERNAL_SERVER_ERROR
                 })?;
         }
+
         Ok(CreatedLink { id: new_link_id })
     }
 }
