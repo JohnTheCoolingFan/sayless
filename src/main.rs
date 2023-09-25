@@ -29,6 +29,8 @@ struct ServiceConfig {
     use_tokens: bool,
     #[serde(default = "default_log_level")]
     log_level: log::Level,
+    #[serde(skip_deserializing)]
+    master_token: Option<String>,
 }
 
 const fn default_max_strikes() -> u16 {
@@ -55,7 +57,7 @@ struct ServiceState {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
-    let config = get_config().await.expect("Reading config failed");
+    let mut config = get_config().await.expect("Reading config failed");
 
     simple_logger::init_with_level(config.log_level)?;
 
@@ -108,6 +110,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     }
 
     if config.use_tokens {
+        let master_token =
+            dotenvy::var("MASTER_TOKEN").expect("master token needs to be set if tokens are used");
+        config.master_token = Some(master_token);
         log::debug!("Creating `tokens` table");
         sqlx::query(
             r#"CREATE TABLE IF NOT EXISTS
