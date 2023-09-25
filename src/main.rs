@@ -1,6 +1,7 @@
 use axum::{
+    body::HttpBody,
     extract::{ConnectInfo, Path, State},
-    http::{HeaderName, StatusCode, Uri},
+    http::{HeaderMap, HeaderName, StatusCode, Uri},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
     Json, Router,
@@ -127,6 +128,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                 expires_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL 1 YEAR) NOT NULL,
                 admin_perm BOOL NOT NULL,
                 create_link_perm BOOL NOT NULL,
+                create_token_perm BOOL NOT NULL,
                 view_ips_perm BOOL NOT NULL
             )"#,
         )
@@ -136,15 +138,19 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let db = Arc::new(db);
 
-    let server_port = config.port;
-
-    let state = ServiceState { db, config };
-
     log::info!("Building router");
-    let router = Router::new()
+    let mut router = Router::new()
         .route("/l/create", post(create_link_route))
         .route("/l/:id", get(get_link_route))
         .route("/l/:id/info", get(get_link_info_route));
+
+    if config.tokens.is_some() {
+        router = router.route("/l/tokens/create", post(create_token_route));
+    }
+
+    let server_port = config.port;
+
+    let state = ServiceState { db, config };
 
     let router = router.with_state(state);
 
@@ -335,4 +341,84 @@ async fn get_link_info_route(
         link,
         created_at,
     }))
+}
+
+struct TokenCreated {
+    token: String,
+}
+
+impl IntoResponse for TokenCreated {
+    fn into_response(self) -> Response {
+        Response::<()>::builder()
+            .status(StatusCode::CREATED)
+            .body(
+                self.token
+                    .boxed_unsync()
+                    .map_err(|_| unreachable!())
+                    .boxed_unsync(),
+            )
+            .unwrap()
+    }
+}
+
+#[derive(Deserialize)]
+struct CreateTokenParams {
+    #[serde(default)]
+    admin_perm: bool,
+    #[serde(default)]
+    create_link_perm: bool,
+    #[serde(default)]
+    create_token_perm: bool,
+    #[serde(default)]
+    view_ips_perm: bool,
+}
+
+const AUTH_HEADER_NAME: HeaderName = HeaderName::from_static("authorization");
+
+async fn create_token_route(
+    State(ServiceState { db, config }): State<ServiceState>,
+    headers: HeaderMap,
+    Json(params): Json<CreateTokenParams>,
+) -> Result<TokenCreated, StatusCode> {
+    let auth_token = headers.get(AUTH_HEADER_NAME).ok_or(StatusCode::FORBIDDEN)?;
+    let auth_token_str = auth_token.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
+    if auth_token_str != config.master_token.unwrap() {
+        let (tok_create_perm, expiry_date): (bool, DateTime<Utc>) =
+            sqlx::query_as("SELECT create_token_perm, expires_at FROM tokens WHERE token = ?")
+                .bind(auth_token_str)
+                .fetch_one(db.as_ref())
+                .await
+                .map_err(|e| match e {
+                    sqlx::Error::RowNotFound => StatusCode::FORBIDDEN,
+                    _ => {
+                        log::error!("Failed to fetch token: {}", e);
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    }
+                })?;
+        if !tok_create_perm {
+            return Err(StatusCode::FORBIDDEN);
+        }
+        let utc_now = Utc::now();
+        if expiry_date < utc_now {
+            return Err(StatusCode::FORBIDDEN);
+        }
+    }
+
+    let rng = StdRng::from_entropy();
+    let new_token: String = rng.sample_iter(Base58Chars).take(44).collect();
+
+    sqlx::query("INSERT INTO tokens (token, admin_perm, create_link_perm, create_token_perm, view_ips_perm) values (?, ?, ?, ?, ?)")
+        .bind(&new_token)
+        .bind(params.admin_perm)
+        .bind(params.create_link_perm)
+        .bind(params.create_token_perm)
+        .bind(params.view_ips_perm)
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| {
+            log::error!("Failed to insert new token: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(TokenCreated { token: new_token })
 }
