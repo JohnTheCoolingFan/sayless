@@ -18,6 +18,7 @@ use std::{
     str::FromStr,
     sync::Arc,
 };
+use tokio_cron_scheduler::{Job, JobScheduler};
 
 #[derive(Deserialize, Clone)]
 struct ServiceConfig {
@@ -215,18 +216,62 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let server_port = config.port;
 
-    let state = ServiceState { db, config };
+    let state = ServiceState {
+        db: Arc::clone(&db),
+        config: config.clone(),
+    };
 
     let router = router.with_state(state);
 
     log::info!("Starting server");
-    axum::Server::bind(&SocketAddr::from((
-        IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-        server_port,
-    )))
-    .serve(router.into_make_service_with_connect_info::<SocketAddr>())
-    .await
-    .unwrap();
+    let server_handle = tokio::spawn(
+        axum::Server::bind(&SocketAddr::from((
+            IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
+            server_port,
+        )))
+        .serve(router.into_make_service_with_connect_info::<SocketAddr>()),
+    );
+
+    if let Some(ip_recoding_config) = config.ip_recording {
+        let sched = JobScheduler::new().await?;
+
+        let retention_check_period = ip_recoding_config.retention_check_period.clone();
+
+        sched
+            .add(Job::new_async(
+                retention_check_period.as_str(),
+                move |_, _| {
+                    let db_cloned = Arc::clone(&db);
+                    Box::pin(async move {
+                        log::info!("IP address retention check");
+                        let expired_date = Utc::now() - ip_recoding_config.retention_period;
+                        if let Err(why) = sqlx::query(
+                            r#"
+                            DELETE FROM origins orgs
+                            WHERE orgs.id in (
+                                SELECT linkst.id
+                                FROM links linkst
+                                WHERE created_at < ?
+                            )"#,
+                        )
+                        .bind(expired_date)
+                        .execute(db_cloned.as_ref())
+                        .await
+                        {
+                            log::error!("Error in IP retention check query: {}", why);
+                        }
+                    })
+                },
+            )?)
+            .await?;
+
+        sched.shutdown_on_ctrl_c();
+
+        sched.start().await?;
+        server_handle.await??;
+    } else {
+        server_handle.await??;
+    }
 
     Ok(())
 }
