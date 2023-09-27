@@ -31,8 +31,6 @@ struct ServiceConfig {
     tokens: Option<TokenConfig>,
     #[serde(default = "default_log_level")]
     log_level: log::Level,
-    #[serde(skip_deserializing)]
-    master_token: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -40,6 +38,8 @@ struct ServiceConfig {
 struct TokenConfig {
     #[serde(default)]
     creation_requires_auth: bool,
+    #[serde(skip_deserializing)]
+    master_token: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -181,10 +181,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .await?;
     }
 
-    if config.tokens.is_some() {
+    if let Some(ref mut tok_config) = &mut config.tokens {
         let master_token =
             dotenvy::var("MASTER_TOKEN").expect("master token needs to be set if tokens are used");
-        config.master_token = Some(master_token);
+        tok_config.master_token = master_token;
         log::debug!("Creating `tokens` table");
         sqlx::query(
             r#"CREATE TABLE IF NOT EXISTS
@@ -336,7 +336,7 @@ async fn create_link_route(
         if tok_config.creation_requires_auth {
             match auth_header {
                 Some(auth) => {
-                    if auth.token() != config.master_token.as_ref().unwrap() {
+                    if auth.token() != tok_config.master_token {
                         let (admin_perm, create_link_perm, expiry_date): (bool, bool, DateTime<Utc>) = sqlx::query_as("SELECT admin_perm, create_link_perm, expires_at FROM tokens WHERE token = ?").bind(auth.token()).fetch_one(db.as_ref()).await.map_err(|e| {
                             match e {
                                 sqlx::Error::RowNotFound => {
@@ -451,12 +451,12 @@ async fn get_link_route(
 }
 
 async fn check_ip_view_perm(
-    config: &ServiceConfig,
+    tok_config: &TokenConfig,
     auth_header: TypedHeader<Authorization<Bearer>>,
     db: &DbPool,
 ) -> Result<bool, StatusCode> {
     let auth_header_str = auth_header.token();
-    if config.master_token.as_ref().unwrap() == auth_header_str {
+    if tok_config.master_token == auth_header_str {
         return Ok(true);
     }
     let tok_response: Result<(bool, bool, DateTime<Utc>), sqlx::Error> =
@@ -503,7 +503,11 @@ async fn get_link_info_route(
     log::debug!("Received link info: id {id}, hash {hash:?}, link {link}, created_at {created_at}");
 
     let has_ip_view_perm = if let Some(auth_header) = auth_header {
-        check_ip_view_perm(&config, auth_header, &db).await?
+        if let Some(tok_config) = &config.tokens {
+            check_ip_view_perm(tok_config, auth_header, &db).await?
+        } else {
+            false
+        }
     } else {
         false
     };
@@ -581,7 +585,7 @@ async fn create_token_route(
     Json(params): Json<CreateTokenParams>,
 ) -> Result<TokenCreated, StatusCode> {
     let auth_token_str = auth_header.token();
-    if auth_token_str != config.master_token.unwrap() {
+    if auth_token_str != config.tokens.as_ref().unwrap().master_token {
         let (admin_perm, tok_create_perm, expiry_date): (bool, bool, DateTime<Utc>) =
             sqlx::query_as(
                 "SELECT admin_perm, create_token_perm, expires_at FROM tokens WHERE token = ?",
