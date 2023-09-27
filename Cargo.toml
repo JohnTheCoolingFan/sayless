@@ -16,4 +16,5 @@ serde = { version = "1.0.188", features = ["derive"] }
 simple_logger = "4.2.0"
 sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-rustls", "chrono", "mysql"] }
 tokio = { version = "1.32.0", features = ["full"] }
+tokio-cron-scheduler = { version = "0.9.4", features = ["signal"] }
 toml = "0.8.0"
