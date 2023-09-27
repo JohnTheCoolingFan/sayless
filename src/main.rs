@@ -7,10 +7,10 @@ use axum::{
     Json, Router, TypedHeader,
 };
 use blake3::Hash;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{de::Visitor, Deserialize, Deserializer, Serialize};
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
 use std::{
     error::Error,
@@ -25,7 +25,7 @@ struct ServiceConfig {
     #[serde(default = "default_max_strikes")]
     max_strikes: u16,
     #[serde(default)]
-    record_ips: bool,
+    ip_recording: Option<IpRecordingConfig>,
     #[serde(default)]
     tokens: Option<TokenConfig>,
     #[serde(default = "default_log_level")]
@@ -39,6 +39,70 @@ struct ServiceConfig {
 struct TokenConfig {
     #[serde(default)]
     creation_requires_auth: bool,
+}
+
+#[derive(Deserialize, Clone)]
+#[serde(rename = "snake_case")]
+struct IpRecordingConfig {
+    #[serde(
+        default = "default_retention_period",
+        deserialize_with = "deserialize_retention_period"
+    )]
+    retention_period: chrono::Duration,
+    #[serde(default = "default_check_period")]
+    retention_check_period: String,
+}
+
+fn default_check_period() -> String {
+    "0 0 * * *".into()
+}
+
+fn default_retention_period() -> Duration {
+    Duration::weeks(2)
+}
+
+fn deserialize_retention_period<'de, D: Deserializer<'de>>(des: D) -> Result<Duration, D::Error> {
+    struct PeriodVisitor;
+
+    impl<'de> Visitor<'de> for PeriodVisitor {
+        type Value = Duration;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("A string signifying a period")
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            let amount: i64 = v[..(v.len() - 1)]
+                .parse()
+                .map_err(|e| serde::de::Error::custom(e))?;
+
+            if v.ends_with('Y') {
+                Ok(Duration::days(amount * 365))
+            } else if v.ends_with('M') {
+                Ok(Duration::days(amount * 30))
+            } else if v.ends_with('w') {
+                Ok(Duration::weeks(amount))
+            } else if v.ends_with('d') {
+                Ok(Duration::days(amount))
+            } else if v.ends_with('h') || v.ends_with('H') {
+                Ok(Duration::hours(amount))
+            } else if v.ends_with('m') {
+                Ok(Duration::minutes(amount))
+            } else if v.ends_with('s') {
+                Ok(Duration::seconds(amount))
+            } else {
+                Err(serde::de::Error::custom(format!(
+                    "Invalid period suffix: {}",
+                    &v[v.len()..]
+                )))
+            }
+        }
+    }
+
+    des.deserialize_str(PeriodVisitor)
 }
 
 const fn default_max_strikes() -> u16 {
@@ -92,7 +156,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     .execute(&db)
     .await?;
 
-    if config.record_ips {
+    if config.ip_recording.is_some() {
         log::debug!("Creating `origins` table");
         sqlx::query(
             r#"CREATE TABLE IF NOT EXISTS
@@ -261,7 +325,7 @@ async fn create_link_route(
         }
     }
 
-    if config.record_ips {
+    if config.ip_recording.is_some() {
         let created_by =
             bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         if let Some((strikes,)) =
@@ -312,7 +376,7 @@ async fn create_link_route(
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
 
-        if config.record_ips {
+        if config.ip_recording.is_some() {
             sqlx::query("INSERT INTO origins (id, created_by) values (?, ?)")
                 .bind(&new_link_id)
                 .bind(created_by)
