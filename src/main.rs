@@ -268,10 +268,8 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         sched.shutdown_on_ctrl_c();
 
         sched.start().await?;
-        server_handle.await??;
-    } else {
-        server_handle.await??;
     }
+    server_handle.await??;
 
     Ok(())
 }
