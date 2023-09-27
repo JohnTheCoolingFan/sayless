@@ -128,7 +128,7 @@ struct ServiceState {
     config: ServiceConfig,
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     let mut config = get_config().await.expect("Reading config failed");
 
