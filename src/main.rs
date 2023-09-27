@@ -1,13 +1,14 @@
 use axum::{
     body::HttpBody,
     extract::{ConnectInfo, Path, State},
-    http::{HeaderMap, HeaderName, StatusCode, Uri},
+    http::{HeaderName, StatusCode, Uri},
     response::{IntoResponse, Redirect, Response},
     routing::{get, post},
-    Json, Router,
+    Json, Router, TypedHeader,
 };
 use blake3::Hash;
 use chrono::{DateTime, Utc};
+use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool};
@@ -105,7 +106,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
         log::debug!("Creating `strikes` table");
         sqlx::query(
-            r#"CREATE TABLE IF NOT EXISTS 
+            r#"CREATE TABLE IF NOT EXISTS
             strikes (
                 origin TINYBLOB NOT NULL,
                 amount SMALLINT UNSIGNED NOT NULL
@@ -168,8 +169,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
 const LOCATION_HEADER: HeaderName = HeaderName::from_static("location");
 
-const AUTH_HEADER: HeaderName = HeaderName::from_static("authorization");
-
 #[derive(Debug, Clone)]
 struct CreatedLink {
     id: String,
@@ -223,33 +222,41 @@ impl Distribution<char> for Base58Chars {
 async fn create_link_route(
     State(ServiceState { db, config }): State<ServiceState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    headers: HeaderMap,
+    auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     url: String,
 ) -> Result<CreatedLink, StatusCode> {
     if let Some(tok_config) = &config.tokens {
         if tok_config.creation_requires_auth {
-            let auth_header = headers.get(AUTH_HEADER).ok_or(StatusCode::FORBIDDEN)?;
-            let auth_header_str = auth_header.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
-            let (admin_perm, link_creation_perm, expiry_date): (bool, bool, DateTime<Utc>) =
-                sqlx::query_as(
-                    "SELECT admin_perm, create_link_perm, expires_at FROM tokens WHERE token = ?",
-                )
-                .bind(auth_header_str)
-                .fetch_one(db.as_ref())
-                .await
-                .map_err(|e| match e {
-                    sqlx::Error::RowNotFound => StatusCode::FORBIDDEN,
-                    _ => {
-                        log::error!("Failed to fetch tokens for perm check: {e}");
-                        StatusCode::INTERNAL_SERVER_ERROR
+            match auth_header {
+                Some(auth) => {
+                    if auth.token() != config.master_token.as_ref().unwrap() {
+                        let (admin_perm, create_link_perm, expiry_date): (bool, bool, DateTime<Utc>) = sqlx::query_as("SELECT admin_perm, create_link_perm, expires_at FROM tokens WHERE token = ?").bind(auth.token()).fetch_one(db.as_ref()).await.map_err(|e| {
+                            match e {
+                                sqlx::Error::RowNotFound => {
+                                    log::warn!("Attempt to use invalid credentials from {}: `{}`", addr.ip(), auth.token());
+                                    StatusCode::UNAUTHORIZED},
+                                _ => {
+                                    log::error!("Error fetching token for permission check: {e}");
+                                    StatusCode::INTERNAL_SERVER_ERROR},
+                            }
+                        })?;
+
+                        if Utc::now() > expiry_date {
+                            log::warn!(
+                                "Attempt to use expired token `{}` from {}: expired at {}",
+                                auth.token(),
+                                addr.ip(),
+                                expiry_date
+                            );
+                            return Err(StatusCode::UNAUTHORIZED);
+                        }
+
+                        if !(admin_perm || create_link_perm) {
+                            return Err(StatusCode::FORBIDDEN);
+                        }
                     }
-                })?;
-            if !link_creation_perm && !admin_perm {
-                return Err(StatusCode::FORBIDDEN);
-            }
-            let utc_now = Utc::now();
-            if utc_now > expiry_date {
-                return Err(StatusCode::FORBIDDEN);
+                }
+                None => return Err(StatusCode::UNAUTHORIZED),
             }
         }
     }
@@ -338,46 +345,39 @@ async fn get_link_route(
 
 async fn check_ip_view_perm(
     config: &ServiceConfig,
-    headers: HeaderMap,
+    auth_header: TypedHeader<Authorization<Bearer>>,
     db: &DbPool,
 ) -> Result<bool, StatusCode> {
-    let auth_header = headers.get(AUTH_HEADER);
-    match auth_header {
-        Some(auth_header) => {
-            let auth_header_str = auth_header.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
-            if config.master_token.as_ref().unwrap() == auth_header_str {
-                return Ok(true);
-            }
-            let tok_response: Result<(bool, bool, DateTime<Utc>), sqlx::Error> = sqlx::query_as(
-                "SELECT admin_perm, view_ips_perm, expires_at FROM tokens WHERE token = ?",
-            )
+    let auth_header_str = auth_header.token();
+    if config.master_token.as_ref().unwrap() == auth_header_str {
+        return Ok(true);
+    }
+    let tok_response: Result<(bool, bool, DateTime<Utc>), sqlx::Error> =
+        sqlx::query_as("SELECT admin_perm, view_ips_perm, expires_at FROM tokens WHERE token = ?")
             .bind(auth_header_str)
             .fetch_one(db.as_ref())
             .await;
-            match tok_response {
-                Err(sqlx::Error::RowNotFound) => Ok(false),
-                Err(err) => {
-                    log::error!("Failed to fetch token permissions: {}", err);
-                    Err(StatusCode::INTERNAL_SERVER_ERROR)
-                }
-                Ok((admin_perm, view_ip_perm, expiry_date)) => {
-                    if !admin_perm || !view_ip_perm {
-                        return Ok(false);
-                    }
-                    if Utc::now() > expiry_date {
-                        return Ok(false);
-                    }
-                    Ok(true)
-                }
-            }
+    match tok_response {
+        Err(sqlx::Error::RowNotFound) => Ok(false),
+        Err(err) => {
+            log::error!("Failed to fetch token permissions: {}", err);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
-        None => Ok(false),
+        Ok((admin_perm, view_ip_perm, expiry_date)) => {
+            if !admin_perm || !view_ip_perm {
+                return Ok(false);
+            }
+            if Utc::now() > expiry_date {
+                return Ok(false);
+            }
+            Ok(true)
+        }
     }
 }
 
 async fn get_link_info_route(
     State(ServiceState { db, config }): State<ServiceState>,
-    headers: HeaderMap,
+    auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
     let (id, hash, link, created_at): (String, Vec<u8>, String, DateTime<Utc>) =
@@ -395,7 +395,13 @@ async fn get_link_info_route(
 
     log::debug!("Received link info: id {id}, hash {hash:?}, link {link}, created_at {created_at}");
 
-    let created_by = if check_ip_view_perm(&config, headers, &db).await? {
+    let has_ip_view_perm = if let Some(auth_header) = auth_header {
+        check_ip_view_perm(&config, auth_header, &db).await?
+    } else {
+        false
+    };
+
+    let created_by = if has_ip_view_perm {
         let created_by: Option<(Vec<u8>,)> =
             sqlx::query_as("SELECT created_by FROM origins WHERE id = ?")
                 .bind(&id)
@@ -464,11 +470,10 @@ struct CreateTokenParams {
 
 async fn create_token_route(
     State(ServiceState { db, config }): State<ServiceState>,
-    headers: HeaderMap,
+    auth_header: TypedHeader<Authorization<Bearer>>,
     Json(params): Json<CreateTokenParams>,
 ) -> Result<TokenCreated, StatusCode> {
-    let auth_token = headers.get(AUTH_HEADER).ok_or(StatusCode::FORBIDDEN)?;
-    let auth_token_str = auth_token.to_str().map_err(|_| StatusCode::BAD_REQUEST)?;
+    let auth_token_str = auth_header.token();
     if auth_token_str != config.master_token.unwrap() {
         let (admin_perm, tok_create_perm, expiry_date): (bool, bool, DateTime<Utc>) =
             sqlx::query_as(
@@ -484,11 +489,12 @@ async fn create_token_route(
                     StatusCode::INTERNAL_SERVER_ERROR
                 }
             })?;
-        if !tok_create_perm && !admin_perm {
-            return Err(StatusCode::FORBIDDEN);
+
+        if expiry_date < Utc::now() {
+            return Err(StatusCode::UNAUTHORIZED);
         }
-        let utc_now = Utc::now();
-        if expiry_date < utc_now {
+
+        if !tok_create_perm && !admin_perm {
             return Err(StatusCode::FORBIDDEN);
         }
     }
