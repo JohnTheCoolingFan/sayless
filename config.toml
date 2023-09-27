@@ -1,9 +1,15 @@
 port = 3000
 # Values below have defaults
 #max_strikes = 30
-#record_ips = false
 #log_level = "info"
 
 # Disabled by default
 #[token_config]
 #creation_requires_auth = false
+
+#Disabled by default
+#[ip_recording]
+#  Allowed suffixes: 'Y', 'M', 'w', 'd', 'h'/'H', 'm', 's'
+#retention_period = "2w"
+#  Uses cron job scheduling syntax
+#retention_check_period = "0 0 * * *"
