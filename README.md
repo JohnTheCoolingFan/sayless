@@ -16,7 +16,7 @@ This feature is optional. During development GDPR compliance was an explicit req
 
 ### Token authorization system
 
-This feature is optional. Tokens provide a way to limit link creation and data access. A token is a 44-character-long string that uses characters from base58 set. This results in a bit over 256^2 possible tokens. Each token has an expidation date. By default it is set to be 1 year away from creation time and no easy API for changing it is implemented yet but it is planned. Each token has this list of permissions (subject to change):
+This feature is optional. Tokens provide a way to limit link creation and data access. A token is a 44-character-long string that uses characters from base58 set. This results in 58^7 possible tokens, a bit over 256-bit security. Each token has an expidation date. By default it is set to be 1 year away from creation time and no easy API for changing it is implemented yet but it is planned. Each token has this list of permissions (subject to change):
 
 - Administrator permission. Grants permission to use everything without needing to specify each permission.
 - Link creation permission. If link creation requires a token with valid permission, only clients that supply a token with this permission would be allowed to create shortened links.
