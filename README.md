@@ -4,7 +4,7 @@ Sayless is a simple link shortening service.
 
 ## Features
 
-- Simple link shortening (domain + `/l/` + 7-character id)
+- Simple link shortening (domain + `/l/` + 7-character id composed of base58 characters)
 - Link deduplication, if the same link is requested, same id would be returned
 - API permission control via tokens
 - GDPR-compliant configurable IP recording
