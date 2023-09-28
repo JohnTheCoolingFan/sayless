@@ -1,5 +1,5 @@
 port = 3000
-# Values below have defaults
+# Values below are commented out with their defaults
 #max_strikes = 30
 #log_level = "info"
 
