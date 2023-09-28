@@ -3,11 +3,11 @@ port = 3000
 #max_strikes = 30
 #log_level = "info"
 
-# Disabled by default
+# Disabled by default, to enable just uncomment the table header, specifying properties is optional (would be set to default)
 #[token_config]
 #creation_requires_auth = false
 
-#Disabled by default
+# Disabled by default, to enable just uncomment the table header, specifying properties is optional (would be set to default)
 #[ip_recording]
 #  Allowed suffixes: 'Y', 'M', 'w', 'd', 'h'/'H', 'm', 's'
 #retention_period = "2w"
