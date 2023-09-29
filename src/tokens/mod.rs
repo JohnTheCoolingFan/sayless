@@ -48,17 +48,13 @@ impl TokenPermissions {
 }
 
 #[derive(Debug)]
-struct TokenPermissionsQuery {
-    expires_at: DateTime<Utc>,
-}
-
-#[derive(Debug)]
 struct TokenExistenceCheck {
     tok_exists: bool,
 }
 
 #[derive(Debug)]
 struct Token {
+    #[allow(dead_code)]
     token: String,
 }
 
