@@ -15,6 +15,7 @@ mod json_schemas;
 mod responses;
 mod routes;
 mod service_config;
+mod tokens;
 
 pub type DbPool = Arc<Pool<MySql>>;
 
