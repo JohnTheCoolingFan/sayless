@@ -57,6 +57,11 @@ struct TokenExistenceCheck {
     tok_exists: bool,
 }
 
+#[derive(Debug)]
+struct Token {
+    token: String,
+}
+
 pub async fn check_permission(
     db: &Pool<MySql>,
     master_token: Option<&str>,
@@ -79,7 +84,7 @@ pub async fn check_permission(
         SELECT CASE WHEN EXISTS (
             SELECT *
             FROM tokens
-            WHERE token = ?
+            WHERE token = ? AND expires_at > CURRENT_TIMESTAMP
         )
         THEN TRUE
         ELSE FALSE
@@ -100,9 +105,9 @@ pub async fn check_permission(
     }
 
     match sqlx::query_as!(
-        TokenPermissionsQuery,
+        Token,
         r#"SELECT
-            expires_at
+            token
         FROM tokens
         WHERE token = ?
         AND (admin_perm = 1 OR admin_perm = ?)
@@ -123,12 +128,6 @@ pub async fn check_permission(
         StatusCode::INTERNAL_SERVER_ERROR
     })? {
         None => Ok(false),
-        Some(TokenPermissionsQuery { expires_at }) => {
-            if Utc::now() > expires_at {
-                Err(StatusCode::UNAUTHORIZED)
-            } else {
-                Ok(true)
-            }
-        }
+        Some(_) => Ok(true),
     }
 }
