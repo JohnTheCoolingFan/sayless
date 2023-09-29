@@ -1,4 +1,8 @@
-use crate::{responses::link_info::LinkInfo, service_config::token::TokenConfig, ServiceState};
+use crate::{
+    responses::link_info::LinkInfo,
+    tokens::{check_permission, TokenPermissions},
+    ServiceState,
+};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -7,52 +11,6 @@ use axum::{
 use blake3::Hash;
 use chrono::{DateTime, Utc};
 use headers::{authorization::Bearer, Authorization};
-use sqlx::{MySql, Pool};
-
-#[derive(Debug)]
-struct ViewIpPermQuery {
-    admin_perm: bool,
-    view_ips_perm: bool,
-    expires_at: DateTime<Utc>,
-}
-
-async fn check_ip_view_perm(
-    tok_config: &TokenConfig,
-    auth_header: TypedHeader<Authorization<Bearer>>,
-    db: &Pool<MySql>,
-) -> Result<bool, StatusCode> {
-    let auth_header_str = auth_header.token();
-    if tok_config.master_token.as_ref() == auth_header_str {
-        return Ok(true);
-    }
-    let tok_response: Result<ViewIpPermQuery, sqlx::Error> = sqlx::query_as!(
-        ViewIpPermQuery,
-        "SELECT admin_perm as `admin_perm: bool`, view_ips_perm as `view_ips_perm: bool`, expires_at FROM tokens WHERE token = ?",
-        auth_header_str
-    )
-    .fetch_one(db)
-    .await;
-    match tok_response {
-        Err(sqlx::Error::RowNotFound) => Ok(false),
-        Err(err) => {
-            log::error!("Failed to fetch token permissions: {}", err);
-            Err(StatusCode::INTERNAL_SERVER_ERROR)
-        }
-        Ok(ViewIpPermQuery {
-            admin_perm,
-            view_ips_perm,
-            expires_at,
-        }) => {
-            if !admin_perm || !view_ips_perm {
-                return Ok(false);
-            }
-            if Utc::now() > expires_at {
-                return Ok(false);
-            }
-            Ok(true)
-        }
-    }
-}
 
 #[derive(Debug)]
 struct LinkInfoQuery {
@@ -68,7 +26,7 @@ struct CreatedByQuery {
 }
 
 pub async fn get_link_info_route(
-    State(ServiceState { db, config }): State<ServiceState>,
+    State(ServiceState { db, config: _ }): State<ServiceState>,
     auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
@@ -90,18 +48,15 @@ pub async fn get_link_info_route(
 
     log::debug!("Received link info: id {id}, hash {hash:?}, link {link}, created_at {created_at}");
 
-    let has_ip_view_perm = if let Some(auth_header) = auth_header {
-        if let Some(tok_config) = &config.tokens {
-            check_ip_view_perm(tok_config, auth_header, &db).await?
-        } else {
-            false
+    let has_ip_view_perm = match auth_header {
+        None => false,
+        Some(tok) => {
+            check_permission(db.as_ref(), tok.token(), TokenPermissions::new().view_ips()).await?
         }
-    } else {
-        false
     };
 
     let created_by = if has_ip_view_perm {
-        let created_by: Option<CreatedByQuery> = sqlx::query_as!(
+        let created_by = sqlx::query_as!(
             CreatedByQuery,
             "SELECT created_by FROM origins WHERE id = ?",
             &id
