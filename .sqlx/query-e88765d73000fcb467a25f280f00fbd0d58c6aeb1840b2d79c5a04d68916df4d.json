@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT created_by FROM origins WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "created_by",
+        "type_info": {
+          "type": "Blob",
+          "flags": "NOT_NULL | BLOB | BINARY | NO_DEFAULT_VALUE",
+          "char_set": 63,
+          "max_size": 255
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e88765d73000fcb467a25f280f00fbd0d58c6aeb1840b2d79c5a04d68916df4d"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "CREATE TABLE IF NOT EXISTS\n            origins (\n                id TEXT NOT NULL,\n                created_by TINYBLOB NOT NULL\n            )",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "438b80718e5b6060a7ee44c340452943eec9e26f729c1a94a9bb0083f1223132"
+}

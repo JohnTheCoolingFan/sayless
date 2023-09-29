@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n        CREATE TABLE IF NOT EXISTS links (\n            id TEXT NOT NULL,\n            hash BLOB NOT NULL,\n            link TEXT NOT NULL,\n            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP\n            )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "21991c24ecb1cdab2a6a771e6a2c1a62b677b9dadf7b838be72ceef7084ed6c9"
+}

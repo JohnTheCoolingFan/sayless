@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT link FROM links WHERE id = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "link",
+        "type_info": {
+          "type": "Blob",
+          "flags": "NOT_NULL | BLOB | NO_DEFAULT_VALUE",
+          "char_set": 224,
+          "max_size": 262140
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ac2ec2b0c6b7e9d14b38d4b248b53d507f81d8f91e35e0bd8519aeacd84a1f51"
+}
