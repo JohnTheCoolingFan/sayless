@@ -15,6 +15,7 @@ pub struct TokenPermissions {
     pub view_ips_perm: bool,
 }
 
+#[allow(dead_code)]
 impl TokenPermissions {
     pub const fn new() -> Self {
         Self {
