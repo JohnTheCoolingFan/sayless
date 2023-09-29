@@ -23,13 +23,13 @@ pub async fn create_link_route(
         if tok_config.creation_requires_auth {
             match auth_header {
                 Some(auth) => {
-                    if auth.token() != tok_config.master_token.as_ref()
-                        && !check_permission(
-                            db.as_ref(),
-                            auth.token(),
-                            TokenPermissions::new().create_link(),
-                        )
-                        .await?
+                    if !check_permission(
+                        db.as_ref(),
+                        Some(&tok_config.master_token),
+                        auth.token(),
+                        TokenPermissions::new().create_link(),
+                    )
+                    .await?
                     {
                         return Err(StatusCode::FORBIDDEN);
                     }

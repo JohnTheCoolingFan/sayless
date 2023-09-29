@@ -26,7 +26,7 @@ struct CreatedByQuery {
 }
 
 pub async fn get_link_info_route(
-    State(ServiceState { db, config: _ }): State<ServiceState>,
+    State(ServiceState { db, config }): State<ServiceState>,
     auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     Path(id): Path<String>,
 ) -> Result<Json<LinkInfo>, StatusCode> {
@@ -51,7 +51,13 @@ pub async fn get_link_info_route(
     let has_ip_view_perm = match auth_header {
         None => false,
         Some(tok) => {
-            check_permission(db.as_ref(), tok.token(), TokenPermissions::new().view_ips()).await?
+            check_permission(
+                db.as_ref(),
+                config.tokens.as_ref().map(|tc| tc.master_token.as_ref()),
+                tok.token(),
+                TokenPermissions::new().view_ips(),
+            )
+            .await?
         }
     };
 

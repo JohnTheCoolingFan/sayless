@@ -15,13 +15,13 @@ pub async fn create_token_route(
     Json(params): Json<CreateTokenParams>,
 ) -> Result<TokenCreated, StatusCode> {
     let auth_token_str = auth_header.token();
-    if auth_token_str != config.tokens.as_ref().unwrap().master_token.as_ref()
-        && !check_permission(
-            db.as_ref(),
-            auth_token_str,
-            TokenPermissions::new().create_token(),
-        )
-        .await?
+    if !check_permission(
+        db.as_ref(),
+        Some(&config.tokens.unwrap().master_token),
+        auth_token_str,
+        TokenPermissions::new().create_token(),
+    )
+    .await?
     {
         return Err(StatusCode::FORBIDDEN);
     }

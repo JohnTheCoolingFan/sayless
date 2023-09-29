@@ -59,6 +59,7 @@ struct TokenExistenceCheck {
 
 pub async fn check_permission(
     db: &Pool<MySql>,
+    master_token: Option<&str>,
     token: &str,
     TokenPermissions {
         admin_perm,
@@ -67,6 +68,11 @@ pub async fn check_permission(
         view_ips_perm,
     }: TokenPermissions,
 ) -> Result<bool, StatusCode> {
+    if let Some(master_token) = master_token {
+        if token == master_token {
+            return Ok(true);
+        }
+    }
     let tok_exists = sqlx::query_as!(
         TokenExistenceCheck,
         r#"
