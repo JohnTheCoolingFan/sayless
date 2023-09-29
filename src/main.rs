@@ -40,6 +40,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let db = Arc::new(connect_db().await?);
 
+    log::info!("Applying migrations");
+    sqlx::migrate!().run(db.as_ref()).await?;
+
     let router = create_router(&config);
 
     let state = ServiceState {
