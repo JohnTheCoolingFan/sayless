@@ -7,7 +7,6 @@ pub mod token;
 
 #[derive(Deserialize, Clone)]
 pub struct ServiceConfig {
-    pub port: u16,
     #[serde(default = "default_max_strikes")]
     pub max_strikes: u16,
     #[serde(default)]
