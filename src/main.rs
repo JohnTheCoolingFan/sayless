@@ -34,13 +34,16 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         .await
         .expect("Reading config failed");
 
-    let server_port = config.port;
-
     let ip_record_config = config.ip_recording.clone();
 
     simple_logger::init_with_level(config.log_level)?;
 
     dotenvy::dotenv()?;
+
+    let server_port = dotenvy::var("PORT")
+        .expect("PORT environment variable must be set")
+        .parse()
+        .expect("Parsing port number failed");
 
     let db = Arc::new(connect_db().await?);
 
