@@ -118,7 +118,7 @@ pub async fn check_permission(
         None => Ok(false),
         Some(TokenPermissionsQuery { expires_at }) => {
             if Utc::now() > expires_at {
-                Err(StatusCode::FORBIDDEN)
+                Err(StatusCode::UNAUTHORIZED)
             } else {
                 Ok(true)
             }
