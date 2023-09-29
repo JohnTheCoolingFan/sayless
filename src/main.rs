@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
                 move |_, _| {
                     let db_cloned = Arc::clone(&db);
                     Box::pin(async move {
-                        log::info!("IP address retention check");
+                        log::debug!("IP address retention check");
                         let expired_date = Utc::now() - ip_recoding_config.retention_period;
                         if let Err(why) = sqlx::query(
                             r#"
