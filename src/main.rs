@@ -1,7 +1,4 @@
-use crate::{
-    database::{connect_db, init_tables},
-    routes::create_router,
-};
+use crate::{database::connect_db, routes::create_router};
 use chrono::Utc;
 use service_config::ServiceConfig;
 use sqlx::{MySql, Pool};
@@ -42,8 +39,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     dotenvy::dotenv()?;
 
     let db = Arc::new(connect_db().await?);
-
-    init_tables(db.as_ref(), &config).await?;
 
     let router = create_router(&config);
 
