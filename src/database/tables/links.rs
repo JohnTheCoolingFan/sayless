@@ -3,7 +3,7 @@ use sqlx::{MySql, Pool};
 pub async fn init_links_table(db: &Pool<MySql>) -> Result<(), sqlx::Error> {
     log::debug!("Creating `links` table");
 
-    sqlx::query(
+    sqlx::query!(
         r#"
         CREATE TABLE IF NOT EXISTS links (
             id TEXT NOT NULL,

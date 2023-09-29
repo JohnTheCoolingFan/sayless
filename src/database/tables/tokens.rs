@@ -3,7 +3,7 @@ use sqlx::{MySql, Pool};
 pub async fn init_tokens_table(db: &Pool<MySql>) -> Result<(), sqlx::Error> {
     log::debug!("Creating `tokens` table");
 
-    sqlx::query(
+    sqlx::query!(
         r#"CREATE TABLE IF NOT EXISTS
             tokens (
                 token TEXT NOT NULL,
