@@ -7,6 +7,13 @@ use chrono::{DateTime, Utc};
 use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
 
+#[derive(Debug)]
+struct CreateTokenPermQuery {
+    admin_perm: bool,
+    create_token_perm: bool,
+    expires_at: DateTime<Utc>,
+}
+
 pub async fn create_token_route(
     State(ServiceState { db, config }): State<ServiceState>,
     auth_header: TypedHeader<Authorization<Bearer>>,
@@ -14,26 +21,30 @@ pub async fn create_token_route(
 ) -> Result<TokenCreated, StatusCode> {
     let auth_token_str = auth_header.token();
     if auth_token_str != config.tokens.as_ref().unwrap().master_token.as_ref() {
-        let (admin_perm, tok_create_perm, expiry_date): (bool, bool, DateTime<Utc>) =
-            sqlx::query_as(
-                "SELECT admin_perm, create_token_perm, expires_at FROM tokens WHERE token = ?",
-            )
-            .bind(auth_token_str)
-            .fetch_one(db.as_ref())
-            .await
-            .map_err(|e| match e {
-                sqlx::Error::RowNotFound => StatusCode::FORBIDDEN,
-                _ => {
-                    log::error!("Failed to fetch token: {}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                }
-            })?;
+        let CreateTokenPermQuery {
+            admin_perm,
+            create_token_perm,
+            expires_at,
+        } = sqlx::query_as!(
+            CreateTokenPermQuery,
+            r#"SELECT admin_perm as `admin_perm: bool`, create_token_perm as `create_token_perm: bool`, expires_at FROM tokens WHERE token = ?"#,
+            auth_token_str
+        )
+        .fetch_one(db.as_ref())
+        .await
+        .map_err(|e| match e {
+            sqlx::Error::RowNotFound => StatusCode::FORBIDDEN,
+            _ => {
+                log::error!("Failed to fetch token: {}", e);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+        })?;
 
-        if expiry_date < Utc::now() {
+        if expires_at < Utc::now() {
             return Err(StatusCode::UNAUTHORIZED);
         }
 
-        if !tok_create_perm && !admin_perm {
+        if !create_token_perm && !admin_perm {
             return Err(StatusCode::FORBIDDEN);
         }
     }

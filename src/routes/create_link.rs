@@ -9,6 +9,13 @@ use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
 use std::{net::SocketAddr, str::FromStr};
 
+#[derive(Debug)]
+struct CreateLinkPermQuery {
+    admin_perm: bool,
+    create_link_perm: bool,
+    expires_at: DateTime<Utc>,
+}
+
 pub async fn create_link_route(
     State(ServiceState { db, config }): State<ServiceState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
@@ -20,23 +27,32 @@ pub async fn create_link_route(
             match auth_header {
                 Some(auth) => {
                     if auth.token() != tok_config.master_token.as_ref() {
-                        let (admin_perm, create_link_perm, expiry_date): (bool, bool, DateTime<Utc>) = sqlx::query_as("SELECT admin_perm, create_link_perm, expires_at FROM tokens WHERE token = ?").bind(auth.token()).fetch_one(db.as_ref()).await.map_err(|e| {
-                            match e {
-                                sqlx::Error::RowNotFound => {
-                                    log::warn!("Attempt to use invalid credentials from {}: `{}`", addr.ip(), auth.token());
-                                    StatusCode::UNAUTHORIZED},
-                                _ => {
-                                    log::error!("Error fetching token for permission check: {e}");
-                                    StatusCode::INTERNAL_SERVER_ERROR},
+                        let CreateLinkPermQuery { admin_perm, create_link_perm, expires_at } = 
+                            sqlx::query_as!(
+                                CreateLinkPermQuery,
+                                r#"SELECT admin_perm as `admin_perm: bool`, create_link_perm as `create_link_perm: bool`, expires_at FROM tokens WHERE token = ?"#,
+                                auth.token()
+                                )
+                            .fetch_one(db.as_ref())
+                            .await
+                            .map_err(|e| {
+                                match e {
+                                    sqlx::Error::RowNotFound => {
+                                        log::warn!("Attempt to use invalid credentials from {}: `{}`", addr.ip(), auth.token());
+                                        StatusCode::UNAUTHORIZED},
+                                    _ => {
+                                        log::error!("Error fetching token for permission check: {e}");
+                                        StatusCode::INTERNAL_SERVER_ERROR},
+                                }
                             }
-                        })?;
+                        )?;
 
-                        if Utc::now() > expiry_date {
+                        if Utc::now() > expires_at {
                             log::warn!(
                                 "Attempt to use expired token `{}` from {}: expired at {}",
                                 auth.token(),
                                 addr.ip(),
-                                expiry_date
+                                expires_at
                             );
                             return Err(StatusCode::UNAUTHORIZED);
                         }
