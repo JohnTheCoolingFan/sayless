@@ -40,19 +40,24 @@ pub async fn create_link_route(
     }
 
     if config.ip_recording.is_some() {
+        #[derive(Debug)]
+        struct Strikes {
+            pub amount: u16,
+        }
         let created_by =
             bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        if let Some((strikes,)) =
-            sqlx::query_as::<_, (u16,)>("SELECT amount FROM strikes WHERE origin = ?")
-                .bind(created_by)
-                .fetch_optional(db.as_ref())
-                .await
-                .map_err(|e| {
-                    log::error!("Error looking up strikes for {}: {}", addr.ip(), e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?
-        {
-            if strikes >= config.max_strikes {
+        if let Some(Strikes { amount }) = sqlx::query_as!(
+            Strikes,
+            "SELECT amount FROM strikes WHERE origin = ?",
+            created_by
+        )
+        .fetch_optional(db.as_ref())
+        .await
+        .map_err(|e| {
+            log::error!("Error looking up strikes for {}: {}", addr.ip(), e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })? {
+            if amount >= config.max_strikes {
                 return Err(StatusCode::FORBIDDEN);
             }
         }
@@ -62,16 +67,18 @@ pub async fn create_link_route(
     let uri_hash = blake3::hash(uri.to_string().as_ref());
     let uri_hash_bytes: [u8; 32] = uri_hash.into();
 
-    if let Some((id,)) = sqlx::query_as("SELECT id FROM links WHERE hash = ?")
-        .bind(uri_hash_bytes.as_ref())
-        .fetch_optional(db.as_ref())
-        .await
-        .map_err(|e| {
-            log::error!("Error when looking for existing link: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?
-    {
-        Ok(CreatedLink { id })
+    if let Some(link) = sqlx::query_as!(
+        CreatedLink,
+        "SELECT id FROM links WHERE hash = ?",
+        uri_hash_bytes.as_ref()
+    )
+    .fetch_optional(db.as_ref())
+    .await
+    .map_err(|e| {
+        log::error!("Error when looking for existing link: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })? {
+        Ok(link)
     } else {
         let created_by =
             bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -79,27 +86,31 @@ pub async fn create_link_route(
         let rng = StdRng::from_entropy();
         let new_link_id: String = rng.sample_iter(Base58Chars).take(7).collect();
 
-        sqlx::query("INSERT INTO links (id, hash, link) values (?, ?, ?)")
-            .bind(&new_link_id)
-            .bind(uri_hash_bytes.as_ref())
-            .bind(uri.to_string())
+        sqlx::query!(
+            "INSERT INTO links (id, hash, link) values (?, ?, ?)",
+            &new_link_id,
+            uri_hash_bytes.as_ref(),
+            uri.to_string()
+        )
+        .execute(db.as_ref())
+        .await
+        .map_err(|e| {
+            log::error!("Error when inserting new link: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+        if config.ip_recording.is_some() {
+            sqlx::query!(
+                "INSERT INTO origins (id, created_by) values (?, ?)",
+                &new_link_id,
+                created_by
+            )
             .execute(db.as_ref())
             .await
             .map_err(|e| {
-                log::error!("Error when inserting new link: {}", e);
+                log::error!("Error when inserting link origin: {}", e);
                 StatusCode::INTERNAL_SERVER_ERROR
             })?;
-
-        if config.ip_recording.is_some() {
-            sqlx::query("INSERT INTO origins (id, created_by) values (?, ?)")
-                .bind(&new_link_id)
-                .bind(created_by)
-                .execute(db.as_ref())
-                .await
-                .map_err(|e| {
-                    log::error!("Error when inserting link origin: {}", e);
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
         }
 
         Ok(CreatedLink { id: new_link_id })
