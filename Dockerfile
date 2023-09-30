@@ -10,3 +10,4 @@ COPY --from=buildenv /build/target/release/sayless ./sayless
 COPY config.toml ./
 COPY db ./
 COPY migrations ./
+ENTRYPOINT [ "/sayless" ]
