@@ -2,12 +2,14 @@ FROM rust:latest as buildenv
 
 WORKDIR /build
 COPY . .
-COPY .sqlx ./
+COPY .sqlx ./.sqlx/
 RUN cargo build -p sayless --release
 
-FROM alpine:latest
-COPY --from=buildenv /build/target/release/sayless ./sayless
-COPY config.toml ./
-COPY db ./
-COPY migrations ./
-ENTRYPOINT [ "/sayless" ]
+FROM ubuntu:latest
+
+WORKDIR /sayless
+COPY --from=buildenv /build/target/release/sayless /sayless/sayless
+COPY config.toml /sayless/config.toml
+COPY db /sayless/db/
+COPY migrations /sayless/migrations/
+ENTRYPOINT ["./sayless"]
