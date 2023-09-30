@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO origins (id, created_by) values (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "216f328fc0db065504a48ef3beeb6687c8e521a09eabec0bcee781e88f0d65f9"
+}

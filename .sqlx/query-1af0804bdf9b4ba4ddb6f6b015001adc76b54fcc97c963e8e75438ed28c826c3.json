@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "create table if not exists tokens (\n    token TEXT not null,\n    created_at TIMESTAMP default CURRENT_TIMESTAMP not null,\n    expires_at TIMESTAMP default (CURRENT_TIMESTAMP + INTERVAL 1 YEAR) not null,\n    admin_perm BOOLEAN not null,\n    create_link_perm BOOLEAN not null,\n    create_token_perm BOOLEAN not null,\n    view_ips_perm BOOLEAN not null\n);\n",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "1af0804bdf9b4ba4ddb6f6b015001adc76b54fcc97c963e8e75438ed28c826c3"
+}

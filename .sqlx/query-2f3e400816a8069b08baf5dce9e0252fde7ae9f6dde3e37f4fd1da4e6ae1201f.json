@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "INSERT INTO links (id, hash, link) values (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "2f3e400816a8069b08baf5dce9e0252fde7ae9f6dde3e37f4fd1da4e6ae1201f"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "\n        SELECT CASE WHEN EXISTS (\n            SELECT *\n            FROM tokens\n            WHERE token = ? AND expires_at > CURRENT_TIMESTAMP\n        )\n        THEN TRUE\n        ELSE FALSE\n        END AS `tok_exists: _`\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tok_exists: _",
+        "type_info": {
+          "type": "Long",
+          "flags": "NOT_NULL | BINARY",
+          "char_set": 63,
+          "max_size": 1
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0210656f344eda7b7fa3b3968bdc4d6b54743c02e8df1ca59820d3f7d0dbe790"
+}

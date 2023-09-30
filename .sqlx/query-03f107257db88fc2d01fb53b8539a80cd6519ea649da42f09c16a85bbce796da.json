@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT\n            token\n        FROM tokens\n        WHERE token = ?\n        AND (admin_perm = 1 OR admin_perm = ?)\n        AND (create_link_perm = 1 OR create_link_perm = ?)\n        AND (create_token_perm = 1 OR create_token_perm = ?)\n        AND (view_ips_perm = 1 OR view_ips_perm = ?);\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "token",
+        "type_info": {
+          "type": "Blob",
+          "flags": "NOT_NULL | BLOB | NO_DEFAULT_VALUE",
+          "char_set": 224,
+          "max_size": 262140
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "03f107257db88fc2d01fb53b8539a80cd6519ea649da42f09c16a85bbce796da"
+}

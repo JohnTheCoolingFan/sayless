@@ -1,0 +1,25 @@
+{
+  "db_name": "MySQL",
+  "query": "SELECT amount FROM strikes WHERE origin = ?",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "amount",
+        "type_info": {
+          "type": "Short",
+          "flags": "NOT_NULL | UNSIGNED | NO_DEFAULT_VALUE",
+          "char_set": 63,
+          "max_size": 5
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f05cbcd36b96ec5c2c003b0c7e72436eb1ce7c0870d130fb3435b8f1c4abcd87"
+}
