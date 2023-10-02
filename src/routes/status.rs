@@ -34,7 +34,7 @@ pub async fn status_route(
         Sayless v{}
 
         IP recording: {};
-        Max amoutn of strikes: {};
+        Max amount of strikes: {};
         Token authentication: {};
         Link creation requires authentication: {};
 
