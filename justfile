@@ -1,7 +1,7 @@
 reset:
     sqlx database drop -y
     cargo clean
-    sqlx database setup -y
+    sqlx database setup
     cargo build
     cargo sqlx prepare
 
