@@ -1,7 +1,4 @@
-use crate::{
-    database::{connect_db, create_ip_recording_tables, create_token_tables},
-    routes::create_router,
-};
+use crate::{database::connect_db, routes::create_router};
 use chrono::Utc;
 use service_config::ServiceConfig;
 use sqlx::{MySql, Pool};
@@ -49,16 +46,6 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     log::info!("Applying migrations");
     sqlx::migrate!().run(db.as_ref()).await?;
-
-    if config.ip_recording.is_some() {
-        log::info!("IP recording is enabled, ensuring tables exist");
-        create_ip_recording_tables(db.as_ref()).await?;
-    }
-
-    if config.tokens.is_some() {
-        log::info!("Tokens are enabled, ensuring tables exist");
-        create_token_tables(db.as_ref()).await?;
-    }
 
     let router = create_router(&config);
 
