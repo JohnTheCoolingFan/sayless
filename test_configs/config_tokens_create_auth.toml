@@ -1,0 +1,21 @@
+# Values below are commented out with their defaults
+#max_strikes = 30
+#log_level = "info"
+
+# Disabled by default, to enable just uncomment the table header, specifying properties is optional (would be set to default)
+[token_config]
+creation_requires_auth = true
+
+# Disabled by default, to enable just uncomment the table header, specifying properties is optional (would be set to default)
+#[ip_recording]
+#  Allowed suffixes: 'Y', 'M', 'w', 'd', 'h'/'H', 'm', 's'
+#    'Y' - Years
+#    'M' - Months
+#    'w' - weeks
+#    'd' - days
+#    'h'/'H' - hours
+#    'm' - minutes
+#    's' - seconds
+#retention_period = "2w"
+#  Uses cron job scheduling syntax
+#retention_check_period = "0 0 * * *"
