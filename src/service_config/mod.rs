@@ -1,6 +1,6 @@
 use self::{ip_recording::IpRecordingConfig, token::TokenConfig};
 use serde::Deserialize;
-use std::{error::Error, sync::Arc};
+use std::{error::Error, path::PathBuf, sync::Arc};
 
 pub mod ip_recording;
 pub mod token;
@@ -26,7 +26,11 @@ const fn default_log_level() -> log::Level {
 }
 
 pub async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
-    let config_str = tokio::fs::read_to_string("config.toml").await?;
+    let config_path: PathBuf = dotenvy::var("CONFIG_FILE")
+        .ok()
+        .unwrap_or_else(|| "config.toml".into())
+        .parse()?;
+    let config_str = tokio::fs::read_to_string(config_path.as_path()).await?;
     let mut config: ServiceConfig = toml::from_str(&config_str)?;
     if let Some(ref mut tok_config) = &mut config.tokens {
         tok_config.master_token = Arc::from(
