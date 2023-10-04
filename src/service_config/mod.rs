@@ -30,6 +30,7 @@ pub async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>>
         .ok()
         .unwrap_or_else(|| "config.toml".into())
         .parse()?;
+    log::info!("Loading config from {}", config_path.to_str().unwrap());
     let config_str = tokio::fs::read_to_string(config_path.as_path()).await?;
     let mut config: ServiceConfig = toml::from_str(&config_str)?;
     if let Some(ref mut tok_config) = &mut config.tokens {
