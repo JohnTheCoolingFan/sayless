@@ -35,7 +35,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     simple_logger::init_with_level(config.log_level)?;
 
-    dotenvy::dotenv()?;
+    if let Err(why) = dotenvy::dotenv() {
+        log::warn!("Failed to load environment variables from `.env`: {why}");
+        log::info!("If you're not using `.env` file for setting environment variables, you can safely ignore this message.");
+    }
 
     let server_port = dotenvy::var("PORT")
         .expect("PORT environment variable must be set")
