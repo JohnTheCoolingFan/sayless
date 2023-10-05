@@ -1,0 +1,12 @@
+{
+  "db_name": "MySQL",
+  "query": "\n                INSERT INTO tokens (\n                    token,\n                    expires_at,\n                    admin_perm,\n                    create_link_perm,\n                    view_ips_perm\n                ) values (?, ?, ?, ?, ?)\n                ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 5
+    },
+    "nullable": []
+  },
+  "hash": "c7cfc83658c6f1794c7a2b5ecdf505a6f18b5d23519e2d71063c86875284a825"
+}
