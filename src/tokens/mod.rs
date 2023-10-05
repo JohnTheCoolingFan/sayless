@@ -54,7 +54,7 @@ pub async fn check_permission(
     master_token: &str,
     token: &str,
     TokenPermissions {
-        admin_perm,
+        admin_perm: _,
         create_link_perm,
         view_ips_perm,
     }: TokenPermissions,
@@ -94,12 +94,11 @@ pub async fn check_permission(
             token
         FROM tokens
         WHERE token = ?
-        AND (admin_perm = 1 OR admin_perm = ?)
+        OR admin_perm = 1
         AND (create_link_perm = 1 OR create_link_perm = ?)
         AND (view_ips_perm = 1 OR view_ips_perm = ?);
         "#,
         token,
-        admin_perm,
         create_link_perm,
         view_ips_perm
     )
