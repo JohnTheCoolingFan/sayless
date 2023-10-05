@@ -9,8 +9,6 @@ pub struct TokenPermissions {
     #[serde(default)]
     pub create_link_perm: bool,
     #[serde(default)]
-    pub create_token_perm: bool,
-    #[serde(default)]
     pub view_ips_perm: bool,
 }
 
@@ -20,7 +18,6 @@ impl TokenPermissions {
         Self {
             admin_perm: false,
             create_link_perm: false,
-            create_token_perm: false,
             view_ips_perm: false,
         }
     }
@@ -32,11 +29,6 @@ impl TokenPermissions {
 
     pub fn create_link(mut self) -> Self {
         self.create_link_perm = true;
-        self
-    }
-
-    pub fn create_token(mut self) -> Self {
-        self.create_token_perm = true;
         self
     }
 
@@ -64,7 +56,6 @@ pub async fn check_permission(
     TokenPermissions {
         admin_perm,
         create_link_perm,
-        create_token_perm,
         view_ips_perm,
     }: TokenPermissions,
 ) -> Result<bool, StatusCode> {
@@ -105,13 +96,11 @@ pub async fn check_permission(
         WHERE token = ?
         AND (admin_perm = 1 OR admin_perm = ?)
         AND (create_link_perm = 1 OR create_link_perm = ?)
-        AND (create_token_perm = 1 OR create_token_perm = ?)
         AND (view_ips_perm = 1 OR view_ips_perm = ?);
         "#,
         token,
         admin_perm,
         create_link_perm,
-        create_token_perm,
         view_ips_perm
     )
     .fetch_optional(db)

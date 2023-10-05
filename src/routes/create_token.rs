@@ -19,7 +19,7 @@ pub async fn create_token_route(
         db.as_ref(),
         &config.tokens.unwrap().master_token,
         auth_token_str,
-        TokenPermissions::new().create_token(),
+        TokenPermissions::new().admin(),
     )
     .await?
     {
@@ -37,14 +37,12 @@ pub async fn create_token_route(
                     token,
                     admin_perm,
                     create_link_perm,
-                    create_token_perm,
                     view_ips_perm
-                ) values (?, ?, ?, ?, ?)
+                ) values (?, ?, ?, ?)
                 "#,
                 &new_token,
                 params.admin_perm,
                 params.create_link_perm,
-                params.create_token_perm,
                 params.view_ips_perm
             )
             .execute(db.as_ref())
@@ -62,15 +60,13 @@ pub async fn create_token_route(
                     expires_at,
                     admin_perm,
                     create_link_perm,
-                    create_token_perm,
                     view_ips_perm
-                ) values (?, ?, ?, ?, ?, ?)
+                ) values (?, ?, ?, ?, ?)
                 "#,
                 &new_token,
                 expiration_date,
                 params.admin_perm,
                 params.create_link_perm,
-                params.create_token_perm,
                 params.view_ips_perm
             )
             .execute(db.as_ref())

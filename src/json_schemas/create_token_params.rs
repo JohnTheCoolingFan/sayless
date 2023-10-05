@@ -8,8 +8,6 @@ pub struct CreateTokenParams {
     #[serde(default)]
     pub create_link_perm: bool,
     #[serde(default)]
-    pub create_token_perm: bool,
-    #[serde(default)]
     pub view_ips_perm: bool,
     #[serde(default, deserialize_with = "deser_timestamp")]
     pub expires_at: Option<DateTime<Utc>>,
