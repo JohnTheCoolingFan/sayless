@@ -1,7 +1,7 @@
 use crate::{
     routes::{
         create_link::create_link_route, create_token::create_token_route, get_link::get_link_route,
-        get_link_info::get_link_info_route, status::status_route,
+        get_link_info::get_link_info_route, revoke_token::revoke_token_route, status::status_route,
     },
     service_config::ServiceConfig,
     ServiceState,
@@ -15,6 +15,7 @@ pub mod create_link;
 pub mod create_token;
 pub mod get_link;
 pub mod get_link_info;
+pub mod revoke_token;
 pub mod status;
 
 pub fn create_router(config: &ServiceConfig) -> Router<ServiceState> {
@@ -26,7 +27,9 @@ pub fn create_router(config: &ServiceConfig) -> Router<ServiceState> {
         .route("/l/:id/info", get(get_link_info_route));
 
     if config.tokens.is_some() {
-        router = router.route("/l/tokens/create", post(create_token_route));
+        router = router
+            .route("/l/tokens/create", post(create_token_route))
+            .route("/l/tokens/revoke", post(revoke_token_route));
     }
 
     router
