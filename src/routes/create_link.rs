@@ -25,7 +25,7 @@ pub async fn create_link_route(
                 Some(auth) => {
                     if !check_permission(
                         db.as_ref(),
-                        Some(&tok_config.master_token),
+                        &tok_config.master_token,
                         auth.token(),
                         TokenPermissions::new().create_link(),
                     )

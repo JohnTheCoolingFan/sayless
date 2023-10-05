@@ -54,7 +54,7 @@ pub async fn get_link_info_route(
             if let Some(tok_config) = config.tokens {
                 check_permission(
                     db.as_ref(),
-                    Some(&tok_config.master_token),
+                    &tok_config.master_token,
                     tok.token(),
                     TokenPermissions::new().view_ips(),
                 )
