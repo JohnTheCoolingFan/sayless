@@ -1,1 +1,1 @@
-delete table tokens;
+drop table tokens;

@@ -1,1 +1,1 @@
-delete table links;
+drop table links;

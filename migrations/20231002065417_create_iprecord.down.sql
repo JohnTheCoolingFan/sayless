@@ -1,2 +1,2 @@
-delete table origins;
-delete table strikes;
+drop table origins;
+drop table strikes;
