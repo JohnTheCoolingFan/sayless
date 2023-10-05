@@ -41,9 +41,9 @@ pub async fn create_token_route(
                 ) values (?, ?, ?, ?)
                 "#,
                 &new_token,
-                params.admin_perm,
-                params.create_link_perm,
-                params.view_ips_perm
+                params.perms.admin_perm,
+                params.perms.create_link_perm,
+                params.perms.view_ips_perm
             )
             .execute(db.as_ref())
             .await
@@ -65,9 +65,9 @@ pub async fn create_token_route(
                 "#,
                 &new_token,
                 expiration_date,
-                params.admin_perm,
-                params.create_link_perm,
-                params.view_ips_perm
+                params.perms.admin_perm,
+                params.perms.create_link_perm,
+                params.perms.view_ips_perm
             )
             .execute(db.as_ref())
             .await

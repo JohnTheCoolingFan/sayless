@@ -1,14 +1,12 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Deserializer};
 
+use crate::tokens::TokenPermissions;
+
 #[derive(Deserialize)]
 pub struct CreateTokenParams {
-    #[serde(default)]
-    pub admin_perm: bool,
-    #[serde(default)]
-    pub create_link_perm: bool,
-    #[serde(default)]
-    pub view_ips_perm: bool,
+    #[serde(flatten, default)]
+    pub perms: TokenPermissions,
     #[serde(default, deserialize_with = "deser_timestamp")]
     pub expires_at: Option<DateTime<Utc>>,
 }
