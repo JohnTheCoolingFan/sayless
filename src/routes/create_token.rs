@@ -31,22 +31,54 @@ pub async fn create_token_route(
 
     match params.expires_at {
         None => {
-            sqlx::query!("INSERT INTO tokens (token, admin_perm, create_link_perm, create_token_perm, view_ips_perm) values (?, ?, ?, ?, ?)", &new_token, params.admin_perm, params.create_link_perm, params.create_token_perm, params.view_ips_perm)
-        .execute(db.as_ref())
-        .await
-        .map_err(|e| {
-            log::error!("Failed to insert new token: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+            sqlx::query!(
+                r#"
+                INSERT INTO tokens (
+                    token,
+                    admin_perm,
+                    create_link_perm,
+                    create_token_perm,
+                    view_ips_perm
+                ) values (?, ?, ?, ?, ?)
+                "#,
+                &new_token,
+                params.admin_perm,
+                params.create_link_perm,
+                params.create_token_perm,
+                params.view_ips_perm
+            )
+            .execute(db.as_ref())
+            .await
+            .map_err(|e| {
+                log::error!("Failed to insert new token: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
         }
         Some(expiration_date) => {
-            sqlx::query!("INSERT INTO tokens (token, expires_at, admin_perm, create_link_perm, create_token_perm, view_ips_perm) values (?, ?, ?, ?, ?, ?)", &new_token, expiration_date, params.admin_perm, params.create_link_perm, params.create_token_perm, params.view_ips_perm)
-                .execute(db.as_ref())
-                .await
-                .map_err(|e| {
-                    log::error!("Failed to insert new token: {e}");
-                    StatusCode::INTERNAL_SERVER_ERROR
-                })?;
+            sqlx::query!(
+                r#"
+                INSERT INTO tokens (
+                    token,
+                    expires_at,
+                    admin_perm,
+                    create_link_perm,
+                    create_token_perm,
+                    view_ips_perm
+                ) values (?, ?, ?, ?, ?, ?)
+                "#,
+                &new_token,
+                expiration_date,
+                params.admin_perm,
+                params.create_link_perm,
+                params.create_token_perm,
+                params.view_ips_perm
+            )
+            .execute(db.as_ref())
+            .await
+            .map_err(|e| {
+                log::error!("Failed to insert new token: {e}");
+                StatusCode::INTERNAL_SERVER_ERROR
+            })?;
         }
     }
 
