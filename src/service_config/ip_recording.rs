@@ -2,7 +2,7 @@ use chrono::Duration;
 use serde::{de::Visitor, Deserialize, Deserializer};
 use std::sync::Arc;
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename = "snake_case")]
 pub struct IpRecordingConfig {
     #[serde(

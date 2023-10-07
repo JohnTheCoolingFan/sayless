@@ -10,7 +10,7 @@ pub async fn status_route(
                 max_strikes,
                 ip_recording,
                 tokens,
-                log_level,
+                log_level: _,
             },
     }): State<ServiceState>,
 ) -> String {
@@ -45,6 +45,6 @@ pub async fn status_route(
         max_strikes,
         tokens_status,
         creation_requires_auth,
-        log_level,
+        log::max_level(),
     )
 }

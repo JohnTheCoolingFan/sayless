@@ -33,7 +33,13 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     let ip_record_config = config.ip_recording.clone();
 
-    simple_logger::init_with_level(config.log_level)?;
+    if let Some(log_level) = config.log_level {
+        simple_logger::init_with_level(log_level)?;
+    } else {
+        simple_logger::init_with_env()?;
+    }
+
+    log::debug!("Configuration: {config:?}");
 
     if let Err(why) = dotenvy::dotenv() {
         log::warn!("Failed to load environment variables from `.env`: {why}");

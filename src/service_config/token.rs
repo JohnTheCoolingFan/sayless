@@ -1,7 +1,7 @@
 use serde::Deserialize;
 use std::sync::Arc;
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(rename = "snake_case")]
 pub struct TokenConfig {
     #[serde(default)]

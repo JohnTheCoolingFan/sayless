@@ -5,7 +5,7 @@ use std::{error::Error, path::PathBuf, sync::Arc};
 pub mod ip_recording;
 pub mod token;
 
-#[derive(Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct ServiceConfig {
     #[serde(default = "default_max_strikes")]
     pub max_strikes: u16,
@@ -13,16 +13,12 @@ pub struct ServiceConfig {
     pub ip_recording: Option<IpRecordingConfig>,
     #[serde(default)]
     pub tokens: Option<TokenConfig>,
-    #[serde(default = "default_log_level")]
-    pub log_level: log::Level,
+    #[serde(default)]
+    pub log_level: Option<log::Level>,
 }
 
 const fn default_max_strikes() -> u16 {
     30
-}
-
-const fn default_log_level() -> log::Level {
-    log::Level::Info
 }
 
 pub async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>> {
