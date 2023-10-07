@@ -3,8 +3,8 @@
 #log_level = "info"
 
 # Disabled by default, to enable just uncomment the table header, specifying properties is optional (would be set to default)
-[token_config]
-creation_requires_auth = true
+#[token_config]
+#creation_requires_auth = true
 
 # Disabled by default, to enable just uncomment the table header, specifying properties is optional (would be set to default)
 #[ip_recording]
