@@ -9,7 +9,7 @@ pub async fn status_route(
             ServiceConfig {
                 max_strikes,
                 ip_recording,
-                tokens,
+                token_config: tokens,
                 log_level: _,
             },
     }): State<ServiceState>,

@@ -26,7 +26,7 @@ pub fn create_router(config: &ServiceConfig) -> Router<ServiceState> {
         .route("/l/:id", get(get_link_route))
         .route("/l/:id/info", get(get_link_info_route));
 
-    if config.tokens.is_some() {
+    if config.token_config.is_some() {
         router = router
             .route("/l/tokens/create", post(create_token_route))
             .route("/l/tokens/revoke", post(revoke_token_route));

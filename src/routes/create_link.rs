@@ -19,7 +19,7 @@ pub async fn create_link_route(
     auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     url: String,
 ) -> Result<CreatedLink, StatusCode> {
-    if let Some(tok_config) = &config.tokens {
+    if let Some(tok_config) = &config.token_config {
         if tok_config.creation_requires_auth {
             match auth_header {
                 Some(auth) => {

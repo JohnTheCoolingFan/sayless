@@ -51,7 +51,7 @@ pub async fn get_link_info_route(
     let has_ip_view_perm = match auth_header {
         None => false,
         Some(tok) => {
-            if let Some(tok_config) = config.tokens {
+            if let Some(tok_config) = config.token_config {
                 check_permission(
                     db.as_ref(),
                     &tok_config.master_token,

@@ -12,7 +12,7 @@ pub struct ServiceConfig {
     #[serde(default)]
     pub ip_recording: Option<IpRecordingConfig>,
     #[serde(default)]
-    pub tokens: Option<TokenConfig>,
+    pub token_config: Option<TokenConfig>,
     #[serde(default)]
     pub log_level: Option<log::Level>,
 }
@@ -29,7 +29,7 @@ pub async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>>
     log::info!("Loading config from {}", config_path.to_str().unwrap());
     let config_str = tokio::fs::read_to_string(config_path.as_path()).await?;
     let mut config: ServiceConfig = toml::from_str(&config_str)?;
-    if let Some(ref mut tok_config) = &mut config.tokens {
+    if let Some(ref mut tok_config) = &mut config.token_config {
         tok_config.master_token = Arc::from(
             dotenvy::var("MASTER_TOKEN")
                 .expect("Master token is required if token system is enabled")

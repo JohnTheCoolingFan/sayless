@@ -17,7 +17,7 @@ pub async fn create_token_route(
     let auth_token_str = auth_header.token();
     if !check_permission(
         db.as_ref(),
-        &config.tokens.unwrap().master_token,
+        &config.token_config.unwrap().master_token,
         auth_token_str,
         TokenPermissions::new().admin(),
     )

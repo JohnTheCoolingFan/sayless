@@ -14,7 +14,7 @@ pub async fn revoke_token_route(
 ) -> Result<(), StatusCode> {
     if check_permission(
         db.as_ref(),
-        &config.tokens.as_ref().unwrap().master_token,
+        &config.token_config.as_ref().unwrap().master_token,
         auth_header.token(),
         TokenPermissions::new().admin(),
     )
