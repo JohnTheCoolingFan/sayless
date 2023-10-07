@@ -4,7 +4,7 @@ use axum::{
 };
 
 pub struct ShortLinkRedirect {
-    location: String,
+    pub location: String,
 }
 
 impl IntoResponse for ShortLinkRedirect {
