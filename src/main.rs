@@ -1,13 +1,16 @@
-use crate::{database::connect_db, routes::create_router};
-use chrono::Utc;
-use service_config::ServiceConfig;
-use sqlx::{MySql, Pool};
 use std::{
     error::Error,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
 };
+
+use chrono::Utc;
+use service_config::ServiceConfig;
+use simple_logger::SimpleLogger;
+use sqlx::{MySql, Pool};
 use tokio_cron_scheduler::{Job, JobScheduler};
+
+use crate::{database::connect_db, routes::create_router};
 
 mod base58;
 mod database;
@@ -36,7 +39,10 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     if let Some(log_level) = config.log_level {
         simple_logger::init_with_level(log_level)?;
     } else {
-        simple_logger::init_with_env()?;
+        SimpleLogger::new()
+            .with_level(log::LevelFilter::Info)
+            .env()
+            .init()?;
     }
 
     log::debug!("Configuration: {config:?}");
