@@ -69,13 +69,14 @@ This service is configured via a config file and environment variables.
 - `PORT`: port that the webserver would be listening on.
 - `DATABASE_URL`: This environment variable controls what database the service would use. Sayless uses MySQL databases, such as MariaDB. The link must follow this format: `mysql://<user>:<password>@<host>:<port>/<database>`.
 - `MASTER_TOKEN`: Only required to be set if token system is enabled. This token can be used to access all endpoints, for example creating new tokens. The length is not limited, but the character set is limited to what a header value can contain.
+- `RUST_LOG`: Optional, sets the log level. By default `"info"` level is used. Possible log levels are, in increasing order of verbosity: `"error"`, `"warn"`, `"info"`, `"debug"`, `"trace"`. If the log level is specified in the config, this variable is ignored.
 
 #### Configuration file
 
 `config.toml` is used for service configuration. An example file with default values is provided in the repository.
 
 - `max_strikes` - Optional. Default: `30`. Only used if ip recording is enabled. If the IP of a client that is trying to create a new link has number of strikes recorded that is higher than or equals to this number, the client would be rejected in link creation.
-- `log_level` - Optional. Default: `"info"`. Sets log level. Possible log levels are, in increasing order of verbosity: `"error"`, `"warn"`, `"info"`, `"debug"`, `"trace"`.
+- `log_level` - Optional. Default: `"info"`. Sets log level. Possible log levels are, in increasing order of verbosity: `"error"`, `"warn"`, `"info"`, `"debug"`, `"trace"`. Takes priority over `RUST_LOG` environment variable.
 - `[token_config]` - Optional table. If present (table header is enough), the token system is enabled.
   - `creation_requires_auth` - Optional. Default: `false`. If set to `true`, creating a shortened link would require providing a token with link creation permission.
 - `[ip_recording]` - Optional table. If present (table header s enough), ip recording is enabled.
