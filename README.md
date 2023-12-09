@@ -20,7 +20,6 @@ This feature is optional. Tokens provide a way to limit link creation and data a
 
 - Administrator permission. Grants permission to use everything without needing to specify each permission.
 - Link creation permission. If link creation requires a token with valid permission, only clients that supply a token with this permission would be allowed to create shortened links.
-- Token creation permission. This permission allows creating new tokens with any permissions ([possible loophole](https://github.com/JohnTheCoolingFan/sayless/issues/3)).
 - IP view permission. Allows seeing IPs of clients that created shortened links via API.
 
 For security and ease of setup, a master token must be provided via `MASTER_TOKEN` environment variable if token system is enabled. It grants access to all functions of the service and cannot be disabled or removed. It can be a string of any length. Character set is limited to what can be used in a header value.
@@ -55,7 +54,6 @@ Request type: POST. Only available if token system is enabled. Creates a token w
 
 - `"admin_perm"` - Admin permission. This permission grants access for all permissions.
 - `"create_link_perm"` - Permission to create links. Only has effect if link creation is configured to require a token with this permission.
-- `"create_token_perm"` - Permission to create new tokens.
 - `"view_ips_perm"` - Permission to view origin IPs of clients that created a link.
 
 ### Configuration
