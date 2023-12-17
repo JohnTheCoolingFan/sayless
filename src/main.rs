@@ -13,6 +13,7 @@ use tokio_cron_scheduler::{Job, JobScheduler};
 use crate::{database::connect_db, routes::create_router};
 
 mod base58;
+mod custom_headers;
 mod database;
 mod json_schemas;
 mod responses;
