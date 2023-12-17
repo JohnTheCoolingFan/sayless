@@ -55,7 +55,7 @@ pub async fn config_info_route(
     State(ServiceState { db: _, config }): State<ServiceState>,
     accept: Option<TypedHeader<Accept>>,
 ) -> Result<ConfigInfoResponse, (StatusCode, String)> {
-    let accept = accept.unwrap_or(TypedHeader(Accept(mime::APPLICATION_JSON)));
+    let accept = accept.unwrap_or(TypedHeader(Accept(mime::TEXT_PLAIN)));
 
     if accept.0 .0 == mime::APPLICATION_JSON {
         Ok(ConfigInfoResponse::Json(config_info_json_handler(config)))
