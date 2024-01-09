@@ -10,7 +10,6 @@ headers = "0.3.9"
 mime = "0.3.17"
 rand = "0.8.5"
 tokio-cron-scheduler = { version = "0.9.4", features = ["signal"] }
-toml = "0.8.0"
 tokio = { workspace = true }
 sqlx = { workspace = true }
 simple_logger = { workspace = true }
@@ -19,11 +18,13 @@ dotenvy = { workspace = true }
 bincode = { workspace = true }
 blake3 = { workspace = true }
 serde = { workspace = true }
+toml = { workspace = true }
 
 [workspace]
-members = ["sayless-frontend"]
+members = ["sayless-frontend", "sayless-link-moderation"]
 
 [workspace.dependencies]
+toml = "0.8.2"
 tokio = { version = "1.32.0", features = ["full"] }
 sqlx = { version = "0.7.1", features = ["runtime-tokio", "tls-rustls", "chrono", "mysql"] }
 simple_logger = "4.2.0"
