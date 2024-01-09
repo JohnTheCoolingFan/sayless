@@ -1,7 +1,7 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Deserializer};
 
-use crate::tokens::TokenPermissions;
+use super::token_permissions::TokenPermissions;
 
 #[derive(Deserialize)]
 pub struct CreateTokenParams {

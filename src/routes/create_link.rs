@@ -1,9 +1,5 @@
-use crate::{
-    base58::Base58Chars,
-    responses::created_link::CreatedLink,
-    tokens::{check_permission, TokenPermissions},
-    ServiceState,
-};
+use std::{net::SocketAddr, str::FromStr};
+
 use axum::{
     extract::{ConnectInfo, State},
     http::{StatusCode, Uri},
@@ -11,7 +7,11 @@ use axum::{
 };
 use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
-use std::{net::SocketAddr, str::FromStr};
+
+use crate::{
+    base58::Base58Chars, json_schemas::token_permissions::TokenPermissions,
+    responses::created_link::CreatedLink, tokens::check_permission, ServiceState,
+};
 
 pub async fn create_link_route(
     State(ServiceState { db, config }): State<ServiceState>,

@@ -1,13 +1,14 @@
-use crate::{
-    base58::Base58Chars,
-    json_schemas::create_token_params::CreateTokenParams,
-    responses::token_created::TokenCreated,
-    tokens::{check_permission, TokenPermissions},
-    ServiceState,
-};
 use axum::{extract::State, http::StatusCode, Json, TypedHeader};
 use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
+
+use crate::{
+    base58::Base58Chars,
+    json_schemas::{create_token_params::CreateTokenParams, token_permissions::TokenPermissions},
+    responses::token_created::TokenCreated,
+    tokens::check_permission,
+    ServiceState,
+};
 
 pub async fn create_token_route(
     State(ServiceState { db, config }): State<ServiceState>,

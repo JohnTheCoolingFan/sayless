@@ -1,8 +1,3 @@
-use crate::{
-    responses::link_info::LinkInfo,
-    tokens::{check_permission, TokenPermissions},
-    ServiceState,
-};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -11,6 +6,11 @@ use axum::{
 use blake3::Hash;
 use chrono::{DateTime, Utc};
 use headers::{authorization::Bearer, Authorization};
+
+use crate::{
+    json_schemas::token_permissions::TokenPermissions, responses::link_info::LinkInfo,
+    tokens::check_permission, ServiceState,
+};
 
 #[derive(Debug)]
 struct LinkInfoQuery {

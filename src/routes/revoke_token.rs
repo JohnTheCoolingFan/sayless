@@ -2,8 +2,7 @@ use axum::{debug_handler, extract::State, http::StatusCode, TypedHeader};
 use headers::{authorization::Bearer, Authorization};
 
 use crate::{
-    tokens::{check_permission, TokenPermissions},
-    ServiceState,
+    json_schemas::token_permissions::TokenPermissions, tokens::check_permission, ServiceState,
 };
 
 #[debug_handler]
