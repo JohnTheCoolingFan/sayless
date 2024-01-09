@@ -11,13 +11,14 @@ pub async fn revoke_token_route(
     auth_header: TypedHeader<Authorization<Bearer>>,
     token: String,
 ) -> Result<(), StatusCode> {
-    if check_permission(
-        db.as_ref(),
-        &config.token_config.as_ref().unwrap().master_token,
-        auth_header.token(),
-        TokenPermissions::new().admin(),
-    )
-    .await?
+    if auth_header.token() == token
+        || check_permission(
+            db.as_ref(),
+            &config.token_config.as_ref().unwrap().master_token,
+            auth_header.token(),
+            TokenPermissions::new().admin(),
+        )
+        .await?
     {
         sqlx::query!(
             "UPDATE tokens SET expires_at = CURRENT_TIMESTAMP WHERE token = ?",
