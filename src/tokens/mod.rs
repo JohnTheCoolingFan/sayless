@@ -53,7 +53,7 @@ pub async fn check_permission(
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    match sqlx::query_as!(
+    Ok(sqlx::query_as!(
         Token,
         r#"SELECT
             token
@@ -72,8 +72,6 @@ pub async fn check_permission(
     .map_err(|e| {
         log::error!("Error fetching permissions for token `{}`: {}", token, e);
         StatusCode::INTERNAL_SERVER_ERROR
-    })? {
-        None => Ok(false),
-        Some(_) => Ok(true),
-    }
+    })?
+    .is_some())
 }
