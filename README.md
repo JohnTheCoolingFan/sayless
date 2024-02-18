@@ -5,8 +5,8 @@ Sayless is a simple link shortening service.
 ## Features
 
 - Simple link shortening (domain + `/l/` + 7-character id composed of base58 characters)
-- Link deduplication, if the same link is requested, same id would be returned
-- API permission control via tokens
+- Link deduplication: if the same link is requested, same id would be returned
+- Optional API permission control via tokens
 - GDPR-compliant configurable IP recording
 - Ability to block certain IPs to prevent malicious links, spam and abuse
 
@@ -24,7 +24,7 @@ This feature is optional. Tokens provide a way to limit link creation and data a
 
 For security and ease of setup, a master token must be provided via `MASTER_TOKEN` environment variable if token system is enabled. It grants access to all functions of the service and cannot be disabled or removed. It can be a string of any length. Character set is limited to what can be used in a header value.
 
-Authorization is performed via Authorization Bearer header.
+Authorization is performed via "Authorization: Bearer" header.
 
 ### API description
 
