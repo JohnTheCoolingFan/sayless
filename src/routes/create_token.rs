@@ -1,4 +1,5 @@
-use axum::{extract::State, http::StatusCode, Json, TypedHeader};
+use axum::{extract::State, http::StatusCode, Json};
+use axum_extra::TypedHeader;
 use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
 
@@ -27,7 +28,7 @@ pub async fn create_token_route(
         return Err(StatusCode::FORBIDDEN);
     }
 
-    let rng = StdRng::from_entropy();
+    let rng = StdRng::from_os_rng();
     let new_token: String = rng.sample_iter(Base58Chars).take(44).collect();
 
     match params.expires_at {

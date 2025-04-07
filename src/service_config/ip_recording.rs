@@ -1,6 +1,7 @@
+use std::sync::Arc;
+
 use chrono::Duration;
 use serde::{de::Visitor, Deserialize, Deserializer};
-use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename = "snake_case")]
@@ -25,7 +26,7 @@ fn default_retention_period() -> Duration {
 fn deserialize_retention_period<'de, D: Deserializer<'de>>(des: D) -> Result<Duration, D::Error> {
     struct PeriodVisitor;
 
-    impl<'de> Visitor<'de> for PeriodVisitor {
+    impl Visitor<'_> for PeriodVisitor {
         type Value = Duration;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {

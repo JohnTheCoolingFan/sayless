@@ -4,8 +4,9 @@ use axum::{
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json, TypedHeader,
+    Json,
 };
+use axum_extra::TypedHeader;
 use chrono::Duration;
 use serde::{Serialize, Serializer};
 

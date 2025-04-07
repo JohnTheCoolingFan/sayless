@@ -1,8 +1,4 @@
-use std::{
-    error::Error,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::Arc,
-};
+use std::{error::Error, future::IntoFuture, net::SocketAddr, sync::Arc};
 
 use chrono::Utc;
 use service_config::ServiceConfig;
@@ -53,7 +49,7 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
         log::info!("If you're not using `.env` file for setting environment variables, you can safely ignore this message.");
     }
 
-    let server_port = dotenvy::var("PORT")
+    let server_port: u16 = dotenvy::var("PORT")
         .expect("PORT environment variable must be set")
         .parse()
         .expect("Parsing port number failed");
@@ -74,11 +70,13 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     log::info!("Starting server");
     let server_handle = tokio::spawn(
-        axum::Server::bind(&SocketAddr::from((
-            IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)),
-            server_port,
-        )))
-        .serve(router.into_make_service_with_connect_info::<SocketAddr>()),
+        axum::serve(
+            tokio::net::TcpListener::bind(format!("0.0.0.0:{server_port}"))
+                .await
+                .unwrap(),
+            router.into_make_service_with_connect_info::<SocketAddr>(),
+        )
+        .into_future(),
     );
 
     if let Some(ip_recoding_config) = ip_record_config {

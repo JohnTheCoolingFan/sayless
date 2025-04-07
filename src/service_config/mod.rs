@@ -1,6 +1,8 @@
-use self::{ip_recording::IpRecordingConfig, token::TokenConfig};
-use serde::Deserialize;
 use std::{error::Error, path::PathBuf, sync::Arc};
+
+use serde::Deserialize;
+
+use self::{ip_recording::IpRecordingConfig, token::TokenConfig};
 
 pub mod ip_recording;
 pub mod token;
@@ -29,7 +31,7 @@ pub async fn get_config() -> Result<ServiceConfig, Box<dyn Error + Send + Sync>>
     log::info!("Loading config from {}", config_path.to_str().unwrap());
     let config_str = tokio::fs::read_to_string(config_path.as_path()).await?;
     let mut config: ServiceConfig = toml::from_str(&config_str)?;
-    if let Some(ref mut tok_config) = &mut config.token_config {
+    if let Some(tok_config) = &mut config.token_config {
         tok_config.master_token = Arc::from(
             dotenvy::var("MASTER_TOKEN")
                 .expect("Master token is required if token system is enabled")

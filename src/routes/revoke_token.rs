@@ -1,4 +1,5 @@
-use axum::{debug_handler, extract::State, http::StatusCode, TypedHeader};
+use axum::{debug_handler, extract::State, http::StatusCode};
+use axum_extra::TypedHeader;
 use headers::{authorization::Bearer, Authorization};
 
 use crate::{

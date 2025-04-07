@@ -3,8 +3,8 @@ use std::{net::SocketAddr, str::FromStr};
 use axum::{
     extract::{ConnectInfo, State},
     http::{StatusCode, Uri},
-    TypedHeader,
 };
+use axum_extra::TypedHeader;
 use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
 
@@ -83,7 +83,7 @@ pub async fn create_link_route(
         let created_by =
             bincode::serialize(&addr.ip()).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        let rng = StdRng::from_entropy();
+        let rng = StdRng::from_os_rng();
         let new_link_id: String = rng.sample_iter(Base58Chars).take(7).collect();
 
         sqlx::query!(
