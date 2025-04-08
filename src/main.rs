@@ -46,7 +46,9 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 
     if let Err(why) = dotenvy::dotenv() {
         log::warn!("Failed to load environment variables from `.env`: {why}");
-        log::info!("If you're not using `.env` file for setting environment variables, you can safely ignore this message.");
+        log::info!(
+            "If you're not using `.env` file for setting environment variables, you can safely ignore this message."
+        );
     }
 
     let server_port: u16 = dotenvy::var("PORT")
@@ -59,14 +61,12 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
     log::info!("Applying migrations");
     sqlx::migrate!().run(db.as_ref()).await?;
 
-    let router = create_router(&config);
-
     let state = ServiceState {
         db: Arc::clone(&db),
         config,
     };
 
-    let router = router.with_state(state);
+    let router = create_router(state.clone());
 
     log::info!("Starting server");
     let server_handle = tokio::spawn(

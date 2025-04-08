@@ -4,21 +4,16 @@ use axum::{
     extract::{ConnectInfo, State},
     http::{StatusCode, Uri},
 };
-use axum_extra::TypedHeader;
-use headers::{authorization::Bearer, Authorization};
 use rand::prelude::*;
 
-use crate::{
-    base58::Base58Chars, json_schemas::token_permissions::TokenPermissions,
-    responses::created_link::CreatedLink, tokens::check_permission, ServiceState,
-};
+use crate::{ServiceState, base58::Base58Chars, responses::created_link::CreatedLink};
 
 pub async fn create_link_route(
     State(ServiceState { db, config }): State<ServiceState>,
     ConnectInfo(addr): ConnectInfo<SocketAddr>,
-    auth_header: Option<TypedHeader<Authorization<Bearer>>>,
     url: String,
 ) -> Result<CreatedLink, StatusCode> {
+    /*
     if let Some(tok_config) = &config.token_config {
         if tok_config.creation_requires_auth {
             match auth_header {
@@ -38,6 +33,7 @@ pub async fn create_link_route(
             }
         }
     }
+    */
 
     if config.ip_recording.is_some() {
         #[derive(Debug)]

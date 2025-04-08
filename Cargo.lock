@@ -2200,6 +2200,7 @@ dependencies = [
  "blake3",
  "chrono",
  "dotenvy",
+ "futures-util",
  "headers",
  "log",
  "mime",
