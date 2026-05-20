@@ -24,8 +24,8 @@ pub fn create_router(config: &ServiceConfig) -> Router<ServiceState> {
     log::info!("Building router");
     let mut router = Router::new()
         .route("/l/create", post(create_link_route))
-        .route("/l/:id", get(get_link_route))
-        .route("/l/:id/info", get(get_link_info_route))
+        .route("/l/{id}", get(get_link_route))
+        .route("/l/{id}/info", get(get_link_info_route))
         .route("/l/config_info", get(config_info_route));
 
     if config.token_config.is_some() {
