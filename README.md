@@ -30,7 +30,7 @@ Authorization is performed via "Authorization: Bearer" header.
 
 Request type is GET unless specified otherwise.
 
-#### `/l/:id`
+#### `/l/{id}`
 
 Redirects to the link with this `id`. Uses response code 303 and the link is in Location header.
 
@@ -38,7 +38,7 @@ Redirects to the link with this `id`. Uses response code 303 and the link is in 
 
 Request type: POST. Accepts the link via request body. Returns 201 code on success and the shortened link in the form `/l/:id` via Location header. Optionally takes an Authorization Bearer token if link creation only by authorized users is configured
 
-#### `/l/:id/info`
+#### `/l/{id}/info`
 
 Gets information about a link with this `id`. The returned information is located in the response body as JSON:
 
